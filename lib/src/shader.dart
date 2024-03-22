@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dart_opengl/dart_opengl.dart';
 import 'package:ffi/ffi.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:vector_math/vector_math.dart';
 
@@ -26,7 +27,8 @@ enum GlShaderType {
 class GlShader {
   final int _id;
 
-  Future<GlShader> fromFile(File file, GlShaderType type) async {
+  @factory
+  static Future<GlShader> fromFile(File file, GlShaderType type) async {
     final source = await file.readAsString();
     return GlShader(basename(file.path), source, type);
   }
