@@ -17,7 +17,7 @@ enum GlShaderType {
   tesselationControl(glTessControlShader),
   tesselationEvalution(glTessEvaluationShader),
   geometry(glGeometryShader),
-  fragment(glTessEvaluationShader),
+  fragment(glFragmentShader),
   compute(glComputeShader);
 
   final int glType;
