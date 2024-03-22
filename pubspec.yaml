@@ -1,0 +1,27 @@
+name: diamond_gl
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.3.0
+
+publish_to: none
+
+dependencies:
+  dart_glfw:
+    git:
+      url: 'https://github.com/gliscowo/dart_glfw.git'
+      ref: 7b082a7
+  dart_opengl:
+    git:
+      url: 'https://github.com/gliscowo/dart_opengl.git'
+      ref: 443eeb7
+  ffi: ^2.1.2
+  logging: ^1.2.0
+  path: ^1.9.0
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0
