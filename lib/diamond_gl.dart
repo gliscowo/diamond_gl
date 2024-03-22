@@ -3,6 +3,11 @@
 /// More dartdocs go here.
 library;
 
+export 'src/color.dart';
+export 'src/debug.dart';
 export 'src/diamond_gl_base.dart' hide baseLogger, getLogger;
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/framebuffer.dart';
+export 'src/shader.dart';
+export 'src/vertex_buffer.dart';
+export 'src/vertex_descriptor.dart';
+export 'src/window.dart';
