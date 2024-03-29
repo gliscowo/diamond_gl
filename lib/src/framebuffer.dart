@@ -29,11 +29,11 @@ class GlFramebuffer {
 
     _colorAttachmentId = _genGlObject((_, ptr) => gl.createTextures(glTexture2d, 1, ptr));
 
-    gl.textureStorage2D(_fbo, 1, glRgba8, _width, _height);
-    gl.textureParameteri(_fbo, glTextureMinFilter, glLinear);
-    gl.textureParameteri(_fbo, glTextureMagFilter, glLinear);
-    gl.textureParameteri(_fbo, glTextureWrapS, glClampToEdge);
-    gl.textureParameteri(_fbo, glTextureWrapT, glClampToEdge);
+    gl.textureStorage2D(_colorAttachmentId, 1, glRgba8, _width, _height);
+    gl.textureParameteri(_colorAttachmentId, glTextureMinFilter, glLinear);
+    gl.textureParameteri(_colorAttachmentId, glTextureMagFilter, glLinear);
+    gl.textureParameteri(_colorAttachmentId, glTextureWrapS, glClampToEdge);
+    gl.textureParameteri(_colorAttachmentId, glTextureWrapT, glClampToEdge);
 
     gl.namedFramebufferTexture(_fbo, glColorAttachment0, _colorAttachmentId, 0);
 
