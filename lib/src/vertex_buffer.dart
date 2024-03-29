@@ -11,12 +11,11 @@ import 'vertex_descriptor.dart';
 class MeshBuffer<VF extends Function> {
   final GlVertexBuffer _vbo = GlVertexBuffer();
   final GlVertexArray _vao = GlVertexArray();
-
-  final BufferWriter _buffer;
-  final VertexDescriptor _descriptor;
-
+  final VertexDescriptor<VF> _descriptor;
   final GlProgram program;
-  late final VF vertex;
+
+  BufferWriter _buffer;
+  late VF _vertex;
 
   MeshBuffer(VertexDescriptor<VF> descriptor, this.program, {int initialBufferSize = 1024})
       : _descriptor = descriptor,
@@ -24,8 +23,18 @@ class MeshBuffer<VF extends Function> {
     gl.vertexArrayVertexBuffer(_vao._id, 0, _vbo._id, 0, descriptor.vertexSize);
     descriptor.prepareAttributes(_vao._id, program);
 
-    vertex = descriptor.createBuilder(_buffer);
+    _vertex = descriptor.createBuilder(_buffer);
   }
+
+  VF get vertex => _vertex;
+
+  BufferWriter get buffer => _buffer;
+  set buffer(BufferWriter buffer) {
+    _buffer = buffer;
+    _vertex = _descriptor.createBuilder(_buffer);
+  }
+
+  int get vertexCount => _buffer._cursor ~/ _descriptor.vertexSize;
 
   void upload({bool dynamic = false}) {
     _vbo.upload(_buffer, dynamic: dynamic);
@@ -36,13 +45,12 @@ class MeshBuffer<VF extends Function> {
   }
 
   void draw() {
-    _vao.draw(_buffer._cursor ~/ _descriptor.vertexSize);
+    _vao.draw(vertexCount);
   }
 
   void delete() {
     _vbo.delete();
     _vao.delete();
-    malloc.free(_buffer._pointer);
   }
 }
 
@@ -58,12 +66,16 @@ class GlVertexBuffer {
   }
 
   void upload(BufferWriter data, {bool dynamic = false}) {
+    final (buffer, free) = data.prepareForUploading();
+
     if (data._cursor > _vboSize) {
-      gl.namedBufferData(_id, data._cursor, data._pointer.cast(), dynamic ? glDynamicDraw : glStaticDraw);
+      gl.namedBufferData(_id, data._cursor, buffer, dynamic ? glDynamicDraw : glStaticDraw);
       _vboSize = data._cursor;
     } else {
-      gl.namedBufferSubData(_id, 0, data._cursor, data._pointer.cast());
+      gl.namedBufferSubData(_id, 0, data._cursor, buffer);
     }
+
+    if (free) malloc.free(buffer);
   }
 
   @Deprecated("Prefer DSA")
@@ -110,19 +122,15 @@ class GlVertexArray {
   }
 }
 
-class BufferWriter {
+final class BufferWriter {
   static final _logger = getLogger("buffer_writer");
   static const _float32Size = Float32List.bytesPerElement;
 
-  late ByteData _data;
-  late Pointer<Uint8> _pointer;
-
+  ByteData _data;
   int _cursor = 0;
 
-  BufferWriter([int initialSize = 64]) {
-    _pointer = malloc<Uint8>(initialSize);
-    _data = _pointer.asTypedList(initialSize).buffer.asByteData();
-  }
+  BufferWriter([int initialSize = 64]) : _data = ByteData(64);
+  factory BufferWriter.native([int initialSize = 64]) => NativeBufferWriter._(initialSize);
 
   void float2(double a, double b) {
     _ensureCapacity(_float32Size * 2);
@@ -160,10 +168,42 @@ class BufferWriter {
 
   int elements(int vertexSizeInBytes) => _cursor ~/ vertexSizeInBytes;
 
+  (Pointer<Void>, bool) prepareForUploading() {
+    final nativeBuffer = malloc<Uint8>(_cursor);
+    nativeBuffer.asTypedList(_cursor).setRange(0, _cursor, _data.buffer.asUint8List());
+
+    return (nativeBuffer.cast(), true);
+  }
+
   void _ensureCapacity(int bytes) {
     if (_cursor + bytes <= _data.lengthInBytes) return;
 
-    _logger?.fine(
+    BufferWriter._logger?.fine(
+      "Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}",
+    );
+
+    final newData = ByteData(_data.lengthInBytes * 2);
+    newData.buffer.asUint8List().setRange(0, _data.lengthInBytes, _data.buffer.asUint8List());
+    _data = newData;
+  }
+}
+
+final class NativeBufferWriter extends BufferWriter {
+  late Pointer<Uint8> _pointer;
+
+  NativeBufferWriter._(int initialSize) {
+    _pointer = malloc<Uint8>(initialSize);
+    _data = _pointer.asTypedList(initialSize).buffer.asByteData();
+  }
+
+  @override
+  (Pointer<Void>, bool) prepareForUploading() => (_pointer.cast(), false);
+
+  @override
+  void _ensureCapacity(int bytes) {
+    if (_cursor + bytes <= _data.lengthInBytes) return;
+
+    BufferWriter._logger?.fine(
       "Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}",
     );
 
