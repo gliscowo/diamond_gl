@@ -129,9 +129,14 @@ class GlProgram {
     gl.programUniform3f(_id, _uniformLocation(uniform), x, y, z);
   }
 
+  void uniform4vf(String uniform, Vector4 vec) => uniform4f(uniform, vec.x, vec.y, vec.z, vec.w);
+  void uniform4f(String uniform, double x, double y, double z, double w) {
+    gl.programUniform4f(_id, _uniformLocation(uniform), x, y, z, w);
+  }
+
   void uniformSampler(String uniform, int texture, int index) {
     gl.programUniform1i(_id, _uniformLocation(uniform), index);
-    gl.bindTextureUnit(0, texture);
+    gl.bindTextureUnit(index, texture);
   }
 
   int _uniformLocation(String uniform) =>
