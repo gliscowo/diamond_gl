@@ -35,6 +35,7 @@ class MeshBuffer<VF extends Function> {
   }
 
   int get vertexCount => _buffer._cursor ~/ _descriptor.vertexSize;
+  bool get isEmpty => _buffer._cursor == 0;
 
   void upload({bool dynamic = false}) {
     _vbo.upload(_buffer, dynamic: dynamic);
@@ -68,11 +69,14 @@ class GlVertexBuffer {
   void upload(BufferWriter data, {bool dynamic = false}) {
     final (buffer, free) = data.prepareForUploading();
 
-    if (data._cursor > _vboSize) {
-      gl.namedBufferData(_id, data._cursor, buffer, dynamic ? glDynamicDraw : glStaticDraw);
-      _vboSize = data._cursor;
-    } else {
-      gl.namedBufferSubData(_id, 0, data._cursor, buffer);
+    // TODO clear the buffer?
+    if (data._cursor != 0) {
+      if (data._cursor > _vboSize) {
+        gl.namedBufferData(_id, data._cursor, buffer, dynamic ? glDynamicDraw : glStaticDraw);
+        _vboSize = data._cursor;
+      } else {
+        gl.namedBufferSubData(_id, 0, data._cursor, buffer);
+      }
     }
 
     if (free) malloc.free(buffer);

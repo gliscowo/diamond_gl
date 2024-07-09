@@ -46,7 +46,7 @@ class Window {
     glfw.windowHint(glfwContextVersionMinor, 5);
     glfw.windowHint(glfwOpenglProfile, glfwOpenglCoreProfile);
 
-    glfw.windowHint(glfwFloating, glfwTrue);
+    // glfw.windowHint(glfwFloating, glfwTrue);
 
     if (debug) glfw.windowHint(glfwOpenglDebugContext, glfwTrue);
     if (samples != 0) glfw.windowHint(glfwSamples, samples);
