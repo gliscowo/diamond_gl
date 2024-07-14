@@ -45,8 +45,8 @@ class MeshBuffer<VF extends Function> {
     _buffer.rewind();
   }
 
-  void draw() {
-    _vao.draw(vertexCount);
+  void draw({int mode = glTriangles}) {
+    _vao.draw(vertexCount, mode: mode);
   }
 
   void delete() {
@@ -104,9 +104,9 @@ class GlVertexArray {
     _id = idPointer.value;
   }
 
-  void draw(int count) {
+  void draw(int count, {int mode = glTriangles}) {
     bind();
-    gl.drawArrays(glTriangles, 0, count);
+    gl.drawArrays(mode, 0, count);
     unbind();
   }
 
