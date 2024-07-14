@@ -9,7 +9,7 @@ import 'shader.dart';
 import 'vertex_descriptor.dart';
 
 class MeshBuffer<VF extends Function> {
-  final GlVertexBuffer _vbo = GlVertexBuffer();
+  final GlBufferObject _vbo = GlBufferObject.array();
   final GlVertexArray _vao = GlVertexArray();
   final VertexDescriptor<VF> _descriptor;
   final GlProgram program;
@@ -38,7 +38,7 @@ class MeshBuffer<VF extends Function> {
   bool get isEmpty => _buffer._cursor == 0;
 
   void upload({bool dynamic = false}) {
-    _vbo.upload(_buffer, dynamic: dynamic);
+    _vbo.upload(_buffer, dynamic ? BufferUsage.dynamicDraw : BufferUsage.staticDraw);
   }
 
   void clear() {
@@ -49,33 +49,59 @@ class MeshBuffer<VF extends Function> {
     _vao.draw(vertexCount, mode: mode);
   }
 
+  void drawInstanced(int instanceCount, {int mode = glTriangles}) {
+    _vao.drawInstanced(vertexCount, instanceCount, mode: mode);
+  }
+
   void delete() {
     _vbo.delete();
     _vao.delete();
   }
 }
 
-class GlVertexBuffer {
-  late final int _id;
-  int _vboSize = 0;
+enum BufferUsage {
+  streamDraw(glStreamDraw),
+  streamRead(glStreamRead),
+  streamCopy(glStreamCopy),
+  staticDraw(glStaticDraw),
+  staticRead(glStaticRead),
+  staticCopy(glStaticCopy),
+  dynamicDraw(glDynamicDraw),
+  dynamicRead(glDynamicRead),
+  dynamicCopy(glDynamicCopy);
 
-  GlVertexBuffer() {
+  final int glType;
+  const BufferUsage(this.glType);
+}
+
+class GlBufferObject {
+  final int type;
+
+  late final int _id;
+  int _glObjectSize = 0;
+
+  GlBufferObject.array() : this._(glArrayBuffer);
+  GlBufferObject.shaderStorage() : this._(glShaderStorageBuffer);
+  GlBufferObject.other(int type) : this._(type);
+
+  GlBufferObject._(this.type) {
     final idPointer = malloc<UnsignedInt>();
     gl.createBuffers(1, idPointer);
     _id = idPointer.value;
     malloc.free(idPointer);
   }
 
-  void upload(BufferWriter data, {bool dynamic = false}) {
-    final (buffer, free) = data.prepareForUploading();
+  int get id => _id;
 
-    // TODO clear the buffer?
-    if (data._cursor != 0) {
-      if (data._cursor > _vboSize) {
-        gl.namedBufferData(_id, data._cursor, buffer, dynamic ? glDynamicDraw : glStaticDraw);
-        _vboSize = data._cursor;
+  void upload(BufferWriter data, BufferUsage usage) {
+    final (buffer, size, free) = data.prepareForUploading();
+
+    if (size != 0) {
+      if (size > _glObjectSize) {
+        gl.namedBufferData(_id, size, buffer, usage.glType);
+        _glObjectSize = size;
       } else {
-        gl.namedBufferSubData(_id, 0, data._cursor, buffer);
+        gl.namedBufferSubData(_id, 0, size, buffer);
       }
     }
 
@@ -83,9 +109,9 @@ class GlVertexBuffer {
   }
 
   @Deprecated("Prefer DSA")
-  void bind() => gl.bindBuffer(glArrayBuffer, _id);
+  void bind() => gl.bindBuffer(glShaderStorageBuffer, _id);
   @Deprecated("Prefer DSA")
-  void unbind() => gl.bindBuffer(glArrayBuffer, 0);
+  void unbind() => gl.bindBuffer(glShaderStorageBuffer, 0);
 
   void delete() {
     final idPointer = malloc<UnsignedInt>();
@@ -107,6 +133,12 @@ class GlVertexArray {
   void draw(int count, {int mode = glTriangles}) {
     bind();
     gl.drawArrays(mode, 0, count);
+    unbind();
+  }
+
+  void drawInstanced(int count, int instanceCount, {int mode = glTriangles}) {
+    bind();
+    gl.drawArraysInstanced(mode, 0, count, instanceCount);
     unbind();
   }
 
@@ -135,6 +167,13 @@ final class BufferWriter {
 
   BufferWriter([int initialSize = 64]) : _data = ByteData(64);
   factory BufferWriter.native([int initialSize = 64]) => NativeBufferWriter._(initialSize);
+
+  void float(double f) {
+    _ensureCapacity(_float32Size);
+
+    _data.setFloat32(_cursor, f, Endian.host);
+    _cursor += _float32Size;
+  }
 
   void float2(double a, double b) {
     _ensureCapacity(_float32Size * 2);
@@ -172,11 +211,11 @@ final class BufferWriter {
 
   int elements(int vertexSizeInBytes) => _cursor ~/ vertexSizeInBytes;
 
-  (Pointer<Void>, bool) prepareForUploading() {
+  (Pointer<Void>, int, bool) prepareForUploading() {
     final nativeBuffer = malloc<Uint8>(_cursor);
     nativeBuffer.asTypedList(_cursor).setRange(0, _cursor, _data.buffer.asUint8List());
 
-    return (nativeBuffer.cast(), true);
+    return (nativeBuffer.cast(), _cursor, true);
   }
 
   void _ensureCapacity(int bytes) {
@@ -201,7 +240,7 @@ final class NativeBufferWriter extends BufferWriter {
   }
 
   @override
-  (Pointer<Void>, bool) prepareForUploading() => (_pointer.cast(), false);
+  (Pointer<Void>, int, bool) prepareForUploading() => (_pointer.cast(), _cursor, false);
 
   @override
   void _ensureCapacity(int bytes) {

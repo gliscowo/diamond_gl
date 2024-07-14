@@ -139,6 +139,10 @@ class GlProgram {
     gl.bindTextureUnit(index, texture);
   }
 
+  void ssbo(int binding, int ssboId) {
+    gl.bindBufferBase(glShaderStorageBuffer, binding, ssboId);
+  }
+
   int _uniformLocation(String uniform) =>
       _uniformCache.putIfAbsent(uniform, () => uniform.withAsNative((utf8) => gl.getUniformLocation(_id, utf8.cast())));
 
