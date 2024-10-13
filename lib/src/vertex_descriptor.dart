@@ -1,8 +1,8 @@
 import 'package:dart_opengl/dart_opengl.dart';
 
+import 'buffer.dart';
 import 'diamond_gl_base.dart';
 import 'shader.dart';
-import 'vertex_buffer.dart';
 
 enum VertexElement {
   float(4, glFloat);
