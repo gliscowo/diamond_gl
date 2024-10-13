@@ -58,7 +58,7 @@ class GlFramebuffer {
     });
   }
 
-  void clear({Color? color, double? depth, double? stencil}) {
+  void clear({Color? color, double? depth, int? stencil}) {
     if (color != null) {
       final colorPtr = malloc<Float>(4);
       colorPtr[0] = color.r;
@@ -77,9 +77,9 @@ class GlFramebuffer {
     }
 
     if (stencil != null) {
-      final stencilPtr = malloc<Float>();
+      final stencilPtr = malloc<Int>();
       stencilPtr.value = stencil;
-      gl.clearNamedFramebufferfv(_fbo, glStencil, 0, stencilPtr);
+      gl.clearNamedFramebufferiv(_fbo, glStencil, 0, stencilPtr);
       malloc.free(stencilPtr);
     }
   }
