@@ -25,7 +25,7 @@ class Window {
   final StreamController<KeyInputEvent> _keyInputListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseInputEvent> _mouseInputListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseMoveEvent> _mouseMoveListeners = StreamController.broadcast(sync: true);
-  final StreamController<double> _mouseScrollListeners = StreamController.broadcast(sync: true);
+  final StreamController<MouseScrollEvent> _mouseScrollListeners = StreamController.broadcast(sync: true);
   final Vector2 _cursorPos = Vector2.zero();
 
   late int _x;
@@ -122,7 +122,7 @@ class Window {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
-    window._mouseScrollListeners.add(yOffset);
+    window._mouseScrollListeners.add(MouseScrollEvent(xOffset, yOffset));
   }
 
   static void _onChar(Pointer<GLFWwindow> handle, int codepoint) {
@@ -180,7 +180,7 @@ class Window {
   Stream<KeyInputEvent> get onKey => _keyInputListeners.stream;
   Stream<MouseInputEvent> get onMouseButton => _mouseInputListeners.stream;
   Stream<MouseMoveEvent> get onMouseMove => _mouseMoveListeners.stream;
-  Stream<double> get onMouseScroll => _mouseScrollListeners.stream;
+  Stream<MouseScrollEvent> get onMouseScroll => _mouseScrollListeners.stream;
 
   int get x => _x;
   int get y => _y;
@@ -202,4 +202,9 @@ class MouseInputEvent {
 class MouseMoveEvent {
   final double deltaX, deltaY;
   MouseMoveEvent(this.deltaX, this.deltaY);
+}
+
+class MouseScrollEvent {
+  final double xOffset, yOffset;
+  MouseScrollEvent(this.xOffset, this.yOffset);
 }
