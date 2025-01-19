@@ -162,6 +162,9 @@ class Window {
     window._keyInputListeners.add(KeyInputEvent(key, scancode, action, mods));
   }
 
+  void activateContext() => glfw.makeContextCurrent(_handle);
+  static void dropContext() => glfw.makeContextCurrent(nullptr);
+
   void _enterFullscreen() {
     _restoreX = _x;
     _restoreY = _y;
