@@ -16,7 +16,22 @@ typedef _GLFWcursorposfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 typedef _GLFWscrollfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 typedef _GLFWmousebuttonfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int);
 
+class OpenGLVersion {
+  final int major, minor;
+  final bool coreProfile;
+
+  const OpenGLVersion(
+    this.major,
+    this.minor, {
+    this.coreProfile = false,
+  });
+}
+
 class Window {
+  /// The default OpenGL version of contexts created through
+  /// this class: 4.5 core profile
+  static const defaultContextVersion = OpenGLVersion(4, 5, coreProfile: true);
+
   static final Map<int, Window> _knownWindows = {};
 
   late final Pointer<GLFWwindow> _handle;
@@ -33,23 +48,31 @@ class Window {
   int _width;
   int _height;
 
+  String _title;
   bool _fullscreen = false;
   int _restoreX = 0;
   int _restoreY = 0;
   int _restoreWidth = 0;
   int _restoreHeight = 0;
 
-  Window(int width, int height, String title, {bool debug = false, int samples = 0})
-      : _width = width,
+  Window(
+    int width,
+    int height,
+    String title, {
+    OpenGLVersion contextVersion = defaultContextVersion,
+    bool floating = false,
+    int msaaSamples = 0,
+    bool debug = false,
+  })  : _title = title,
+        _width = width,
         _height = height {
-    glfw.windowHint(glfwContextVersionMajor, 4);
-    glfw.windowHint(glfwContextVersionMinor, 5);
-    glfw.windowHint(glfwOpenglProfile, glfwOpenglCoreProfile);
+    glfw.windowHint(glfwContextVersionMajor, contextVersion.major);
+    glfw.windowHint(glfwContextVersionMinor, contextVersion.minor);
+    glfw.windowHint(glfwOpenglProfile, contextVersion.coreProfile ? glfwOpenglCoreProfile : glfwOpenglCompatProfile);
 
-    // glfw.windowHint(glfwFloating, glfwTrue);
-
+    if (floating) glfw.windowHint(glfwFloating, glfwTrue);
+    if (msaaSamples != 0) glfw.windowHint(glfwSamples, msaaSamples);
     if (debug) glfw.windowHint(glfwOpenglDebugContext, glfwTrue);
-    if (samples != 0) glfw.windowHint(glfwSamples, samples);
 
     _handle = title.withAsNative((utf8) => glfw.createWindow(width, height, utf8.cast(), nullptr, nullptr));
 
@@ -139,40 +162,69 @@ class Window {
     window._keyInputListeners.add(KeyInputEvent(key, scancode, action, mods));
   }
 
-  void toggleFullscreen() {
-    if (_fullscreen) {
-      glfw.setWindowMonitor(_handle, nullptr, _restoreX, _restoreY, _restoreWidth, _restoreHeight, glfwDontCare);
-      _fullscreen = false;
-    } else {
-      _restoreX = _x;
-      _restoreY = _y;
-      _restoreWidth = _width;
-      _restoreHeight = _height;
+  void _enterFullscreen() {
+    _restoreX = _x;
+    _restoreY = _y;
+    _restoreWidth = _width;
+    _restoreHeight = _height;
 
-      final width = malloc<Int>();
-      final height = malloc<Int>();
-      final monitors = malloc<Int>();
+    final width = malloc<Int>();
+    final height = malloc<Int>();
+    final monitors = malloc<Int>();
 
-      final monitor = glfw.getMonitors(monitors)[0];
-      glfw.getMonitorWorkarea(monitor, nullptr, nullptr, width, height);
+    final monitor = glfw.getMonitors(monitors)[0];
+    glfw.getMonitorWorkarea(monitor, nullptr, nullptr, width, height);
 
-      glfw.setWindowMonitor(_handle, monitor, 0, 0, width.value, height.value, glfwDontCare);
+    glfw.setWindowMonitor(_handle, monitor, 0, 0, width.value, height.value, glfwDontCare);
 
-      malloc.free(width);
-      malloc.free(height);
-      malloc.free(monitors);
-
-      _fullscreen = true;
-    }
+    malloc.free(width);
+    malloc.free(height);
+    malloc.free(monitors);
   }
 
+  void _exitFullscreen() =>
+      glfw.setWindowMonitor(_handle, nullptr, _restoreX, _restoreY, _restoreWidth, _restoreHeight, glfwDontCare);
+
+  bool get fullscreen => _fullscreen;
+  set fullscreen(bool value) {
+    if (value == _fullscreen) return;
+
+    _fullscreen = value;
+    _fullscreen ? _enterFullscreen() : _exitFullscreen();
+  }
+
+  String get title => _title;
+  set title(String value) {
+    if (value == _title) return;
+
+    _title = value;
+    value.withAsNative((utf8) => glfw.setWindowTitle(_handle, utf8.cast()));
+  }
+
+  /// Prepare this window for the next frame and present
+  /// the current one. Equivalent to a call to [glfw.swapBuffers]
+  /// followed by [glfw.pollEvents]
   void nextFrame() {
     glfw.swapBuffers(_handle);
     glfw.pollEvents();
   }
 
   double get cursorX => _cursorPos.x;
+  set cursorX(double value) {
+    if (value == _cursorPos.x) return;
+
+    _cursorPos.x = value;
+    glfw.setCursorPos(_handle, _cursorPos.x, _cursorPos.y);
+  }
+
   double get cursorY => _cursorPos.y;
+  set cursorY(double value) {
+    if (value == _cursorPos.y) return;
+
+    _cursorPos.y = value;
+    glfw.setCursorPos(_handle, _cursorPos.x, _cursorPos.y);
+  }
+
   Vector2 get cursorPos => _cursorPos.xy;
 
   Stream<Window> get onResize => _resizeListeners.stream;
