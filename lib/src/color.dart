@@ -57,6 +57,6 @@ class Color {
   Vector4 asVector() => Vector4.copy(_storage);
 
   String toHexString(bool alpha) {
-    return alpha ? argb.toRadixString(16).padLeft(8, "0") : rgb.toRadixString(16).padLeft(6, "0");
+    return alpha ? argb.toRadixString(16).padLeft(8, '0') : rgb.toRadixString(16).padLeft(6, '0');
   }
 }

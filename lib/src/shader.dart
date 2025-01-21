@@ -10,7 +10,7 @@ import 'package:vector_math/vector_math.dart';
 
 import 'diamond_gl_base.dart';
 
-final _logger = getLogger("shader_compiler");
+final _logger = getLogger('shader_compiler');
 
 enum GlShaderType {
   vertex(glVertexShader),
@@ -50,7 +50,7 @@ class GlShader {
 
     final success = malloc<Int>();
     gl.getShaderiv(_id, glCompileStatus, success);
-    _logger?.fine("Shader '$sourceName' compile success: ${success.value}");
+    _logger?.fine('Shader "$sourceName" compile success: ${success.value}');
 
     if (success.value != glTrue) {
       final logLength = malloc<Int>();
@@ -58,7 +58,7 @@ class GlShader {
 
       final log = malloc<Char>(logLength.value);
       gl.getShaderInfoLog(_id, logLength.value, nullptr, log);
-      _logger?.severe("Failed to compile shader '$sourceName': ${log.cast<Utf8>().toDartString()}");
+      _logger?.severe('Failed to compile shader "$sourceName": ${log.cast<Utf8>().toDartString()}');
 
       malloc.free(logLength);
       malloc.free(log);
@@ -90,7 +90,7 @@ class GlProgram {
 
     final success = malloc<Int>();
     gl.getProgramiv(_id, glLinkStatus, success);
-    _logger?.fine("Program '$name' link success: ${success.value}");
+    _logger?.fine('Program "$name link success: ${success.value}');
 
     if (success.value != glTrue) {
       final logLength = malloc<Int>();
@@ -98,7 +98,7 @@ class GlProgram {
 
       final log = malloc<Char>(logLength.value);
       gl.getProgramInfoLog(_id, logLength.value, nullptr, log);
-      _logger?.severe("Failed to link program '$name': ${log.cast<Utf8>().toDartString()}");
+      _logger?.severe('Failed to link program "$name": ${log.cast<Utf8>().toDartString()}');
 
       malloc.free(logLength);
       malloc.free(log);

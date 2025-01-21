@@ -108,9 +108,9 @@ class GlBufferObject {
     if (free) malloc.free(buffer);
   }
 
-  @Deprecated("Prefer DSA")
+  @Deprecated('Prefer DSA')
   void bind() => gl.bindBuffer(glShaderStorageBuffer, _id);
-  @Deprecated("Prefer DSA")
+  @Deprecated('Prefer DSA')
   void unbind() => gl.bindBuffer(glShaderStorageBuffer, 0);
 
   void delete() {
@@ -159,7 +159,7 @@ class GlVertexArray {
 }
 
 final class BufferWriter {
-  static final _logger = getLogger("buffer_writer");
+  static final _logger = getLogger('buffer_writer');
   static const _float32Size = Float32List.bytesPerElement;
 
   ByteData _data;
@@ -222,7 +222,7 @@ final class BufferWriter {
     if (_cursor + bytes <= _data.lengthInBytes) return;
 
     BufferWriter._logger?.fine(
-      "Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}",
+      'Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}',
     );
 
     final newData = ByteData(_data.lengthInBytes * 2);
@@ -247,7 +247,7 @@ final class NativeBufferWriter extends BufferWriter {
     if (_cursor + bytes <= _data.lengthInBytes) return;
 
     BufferWriter._logger?.fine(
-      "Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}",
+      'Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}',
     );
 
     final newPointer = malloc<Uint8>(_data.lengthInBytes * 2);

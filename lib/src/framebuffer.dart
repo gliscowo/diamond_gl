@@ -101,7 +101,7 @@ class GlFramebuffer {
         (true, true) => glFramebuffer,
         (true, false) => glDrawFramebuffer,
         (false, true) => glReadFramebuffer,
-        _ => throw ArgumentError("Either draw or read must be set")
+        _ => throw ArgumentError('Either draw or read must be set')
       };
 
   int _genGlObject(void Function(int, Pointer<UnsignedInt>) factory) {

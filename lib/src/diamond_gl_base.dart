@@ -11,7 +11,7 @@ final glfw = loadGLFW('');
 late final Logger? baseLogger;
 Logger? getLogger(String system) {
   if (baseLogger == null) return null;
-  return Logger("${baseLogger!.name}.$system");
+  return Logger('${baseLogger!.name}.$system');
 }
 
 void initDiamondGL({Logger? logger}) {

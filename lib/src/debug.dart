@@ -5,21 +5,21 @@ import 'package:diamond_gl/src/diamond_gl_base.dart';
 import 'package:ffi/ffi.dart';
 
 const Map<int, String> _glMessageTypes = {
-  glDebugTypeMarker: "MARKER",
-  glDebugTypeDeprecatedBehavior: "DEPRECATED_BEHAVIOR",
-  glDebugTypeError: "ERROR",
-  glDebugTypeOther: "OTHER",
-  glDebugTypePerformance: "PERFORMANCE",
-  glDebugTypePortability: "PORTABILITY",
-  glDebugTypePushGroup: "PUSH_GROUP",
-  glDebugTypePopGroup: "POP_GROUP",
+  glDebugTypeMarker: 'MARKER',
+  glDebugTypeDeprecatedBehavior: 'DEPRECATED_BEHAVIOR',
+  glDebugTypeError: 'ERROR',
+  glDebugTypeOther: 'OTHER',
+  glDebugTypePerformance: 'PERFORMANCE',
+  glDebugTypePortability: 'PORTABILITY',
+  glDebugTypePushGroup: 'PUSH_GROUP',
+  glDebugTypePopGroup: 'POP_GROUP',
 };
 
 const Map<int, String> _glSeverities = {
-  glDebugSeverityNotification: "NOTIFICATION",
-  glDebugSeverityLow: "LOW",
-  glDebugSeverityMedium: "MEDIUM",
-  glDebugSeverityHigh: "HIGH",
+  glDebugSeverityNotification: 'NOTIFICATION',
+  glDebugSeverityLow: 'LOW',
+  glDebugSeverityMedium: 'MEDIUM',
+  glDebugSeverityHigh: 'HIGH',
 };
 
 final class DiamondGLDebugSettings {
@@ -38,8 +38,8 @@ void attachGlfwErrorCallback() {
   glfw.setErrorCallback(Pointer.fromFunction(_onGlfwError));
 }
 
-final _glLogger = getLogger("opengl");
-final _glfwLogger = getLogger("glfw");
+final _glLogger = getLogger('opengl');
+final _glfwLogger = getLogger('glfw');
 
 void _onGlError(
   int source,
@@ -53,7 +53,7 @@ void _onGlError(
   if (_glLogger == null || severity < DiamondGLDebugSettings.minGlDebugSeverity) return;
 
   _glLogger!.warning(
-      "OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}");
+      'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}');
   if (DiamondGLDebugSettings.printGlDebugStacktrace) _glLogger!.warning(StackTrace.current);
 }
 

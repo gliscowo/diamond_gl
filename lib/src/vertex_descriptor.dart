@@ -12,7 +12,7 @@ enum VertexElement {
 }
 
 class VertexDescriptor<VertexFunction extends Function> {
-  static final _logger = getLogger("vertex_descriptor");
+  static final _logger = getLogger('vertex_descriptor');
   static final _missingAttrs = Expando<Set<String>>();
 
   final VertexFunction Function(BufferWriter) _builderFactory;
@@ -30,7 +30,7 @@ class VertexDescriptor<VertexFunction extends Function> {
     for (final attr in _attributes) {
       final location = program.getAttributeLocation(attr.name);
       if (location == -1 && _isKnownToMissAttr(program, attr.name)) {
-        _logger?.warning("Did not find attribute '${attr.name}' in program '${program.name}'");
+        _logger?.warning('Did not find attribute "${attr.name}" in program "${program.name}"');
         _markMissingAttr(program, attr.name);
 
         continue;
