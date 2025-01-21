@@ -6,7 +6,7 @@ import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
 
 final gl = loadOpenGL();
-final glfw = loadGLFW("");
+final glfw = loadGLFW('');
 
 late final Logger? baseLogger;
 Logger? getLogger(String system) {

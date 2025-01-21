@@ -4,9 +4,6 @@ import 'package:dart_opengl/dart_opengl.dart';
 import 'package:diamond_gl/src/diamond_gl_base.dart';
 import 'package:ffi/ffi.dart';
 
-typedef _GlErrorCallback = Void Function(
-    UnsignedInt, UnsignedInt, UnsignedInt, UnsignedInt, Int, Pointer<Char>, Pointer<Void>);
-
 const Map<int, String> _glMessageTypes = {
   glDebugTypeMarker: "MARKER",
   glDebugTypeDeprecatedBehavior: "DEPRECATED_BEHAVIOR",
@@ -25,22 +22,44 @@ const Map<int, String> _glSeverities = {
   glDebugSeverityHigh: "HIGH",
 };
 
-int minGlDebugSeverity = glDebugSeverityNotification;
-bool printGlDebugStacktrace = false;
+final class DiamondGLDebugSettings {
+  static var minGlDebugSeverity = glDebugSeverityNotification;
+  static var printGlDebugStacktrace = false;
+  static var printGlfwDebugStacktrace = false;
+}
 
 void attachGlErrorCallback() {
   gl.enable(glDebugOutput);
   gl.enable(glDebugOutputSynchronous);
-  gl.debugMessageCallback(Pointer.fromFunction<_GlErrorCallback>(_onGlError), nullptr);
+  gl.debugMessageCallback(Pointer.fromFunction(_onGlError), nullptr);
 }
 
-final _logger = getLogger("opengl");
+void attachGlfwErrorCallback() {
+  glfw.setErrorCallback(Pointer.fromFunction(_onGlfwError));
+}
+
+final _glLogger = getLogger("opengl");
+final _glfwLogger = getLogger("glfw");
 
 void _onGlError(
-    int source, int type, int id, int severity, int length, Pointer<Char> message, Pointer<Void> userParam) {
-  if (_logger == null || severity < minGlDebugSeverity) return;
+  int source,
+  int type,
+  int id,
+  int severity,
+  int length,
+  Pointer<Char> message,
+  Pointer<Void> userParam,
+) {
+  if (_glLogger == null || severity < DiamondGLDebugSettings.minGlDebugSeverity) return;
 
-  _logger!.warning(
+  _glLogger!.warning(
       "OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}");
-  if (printGlDebugStacktrace) _logger!.warning(StackTrace.current);
+  if (DiamondGLDebugSettings.printGlDebugStacktrace) _glLogger!.warning(StackTrace.current);
+}
+
+void _onGlfwError(int errorCode, Pointer<Char> description) {
+  if (_glfwLogger == null) return;
+
+  _glfwLogger!.severe('GLFW Error: ${description.cast<Utf8>().toDartString()} ($errorCode)');
+  if (DiamondGLDebugSettings.printGlDebugStacktrace) _glfwLogger!.warning(StackTrace.current);
 }

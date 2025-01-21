@@ -77,10 +77,14 @@ class Window {
     _handle = title.withAsNative((utf8) => glfw.createWindow(width, height, utf8.cast(), nullptr, nullptr));
 
     if (_handle.address == 0) {
-      glfw.terminate();
+      final stringPtr = malloc<Pointer<Utf8>>();
+      final errorCode = glfw.getError(stringPtr.cast());
 
-      //TODO better exception
-      throw Exception("Failed to create window");
+      final errorDescription = stringPtr.value.toDartString();
+      malloc.free(stringPtr);
+
+      glfw.terminate();
+      throw WindowInitializationException(errorCode, errorDescription);
     }
 
     final windowX = malloc<Int>();
@@ -262,4 +266,14 @@ class MouseMoveEvent {
 class MouseScrollEvent {
   final double xOffset, yOffset;
   MouseScrollEvent(this.xOffset, this.yOffset);
+}
+
+class WindowInitializationException {
+  final int glfwErrorCode;
+  final String errorDescription;
+
+  WindowInitializationException(this.glfwErrorCode, this.errorDescription);
+
+  @override
+  String toString() => 'could not create window: $errorDescription (glfw error $glfwErrorCode)';
 }
