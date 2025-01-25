@@ -3,6 +3,7 @@ import 'dart:ffi';
 
 import 'package:dart_glfw/dart_glfw.dart';
 import 'package:ffi/ffi.dart';
+import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart';
 
 import 'diamond_gl_base.dart';
@@ -206,6 +207,24 @@ class Window {
 
     _title = value;
     value.withAsNative((utf8) => glfw.setWindowTitle(_handle, utf8.cast()));
+  }
+
+  void setIcon(Image icon) {
+    var image = malloc<GLFWimage>();
+    image.ref.width = icon.width;
+    image.ref.height = icon.height;
+
+    final convertedIcon = icon.convert(format: Format.uint8, numChannels: 4, alpha: 255);
+
+    final bufferSize = convertedIcon.width * convertedIcon.height * convertedIcon.numChannels;
+    final glfwBuffer = malloc<Uint8>(bufferSize);
+
+    glfwBuffer.asTypedList(bufferSize).setRange(0, bufferSize, convertedIcon.data!.buffer.asUint8List());
+    image.ref.pixels = glfwBuffer.cast();
+
+    glfw.setWindowIcon(_handle, 1, image);
+    malloc.free(glfwBuffer);
+    malloc.free(image);
   }
 
   /// Prepare this window for the next frame and present
