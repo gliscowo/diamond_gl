@@ -109,9 +109,9 @@ class GlBufferObject {
   }
 
   @Deprecated('Prefer DSA')
-  void bind() => gl.bindBuffer(glShaderStorageBuffer, _id);
+  void bind() => gl.bindBuffer(type, _id);
   @Deprecated('Prefer DSA')
-  void unbind() => gl.bindBuffer(glShaderStorageBuffer, 0);
+  void unbind() => gl.bindBuffer(type, 0);
 
   void delete() {
     final idPointer = malloc<UnsignedInt>();
@@ -160,6 +160,7 @@ class GlVertexArray {
 
 final class BufferWriter {
   static final _logger = getLogger('buffer_writer');
+  static const _uint32Size = Uint32List.bytesPerElement;
   static const _float32Size = Float32List.bytesPerElement;
 
   ByteData _data;
@@ -167,6 +168,43 @@ final class BufferWriter {
 
   BufferWriter([int initialSize = 64]) : _data = ByteData(64);
   factory BufferWriter.native([int initialSize = 64]) => NativeBufferWriter._(initialSize);
+
+  void uint(int f) {
+    _ensureCapacity(_uint32Size);
+
+    _data.setUint32(_cursor, f, Endian.host);
+    _cursor += _uint32Size;
+  }
+
+  void uint2(int a, int b) {
+    _ensureCapacity(_uint32Size * 2);
+
+    _data
+      ..setUint32(_cursor + _uint32Size * 0, a, Endian.host)
+      ..setUint32(_cursor + _uint32Size * 1, b, Endian.host);
+    _cursor += _uint32Size * 2;
+  }
+
+  void uint3(int a, int b, int c) {
+    _ensureCapacity(_uint32Size * 3);
+
+    _data
+      ..setUint32(_cursor + _uint32Size * 0, a, Endian.host)
+      ..setUint32(_cursor + _uint32Size * 1, b, Endian.host)
+      ..setUint32(_cursor + _uint32Size * 2, c, Endian.host);
+    _cursor += _uint32Size * 3;
+  }
+
+  void uint4(int a, int b, int c, int d) {
+    _ensureCapacity(_uint32Size * 4);
+
+    _data
+      ..setUint32(_cursor + _uint32Size * 0, a, Endian.host)
+      ..setUint32(_cursor + _uint32Size * 1, b, Endian.host)
+      ..setUint32(_cursor + _uint32Size * 2, c, Endian.host)
+      ..setUint32(_cursor + _uint32Size * 3, d, Endian.host);
+    _cursor += _uint32Size * 4;
+  }
 
   void float(double f) {
     _ensureCapacity(_float32Size);
