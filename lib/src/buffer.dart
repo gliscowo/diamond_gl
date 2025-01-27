@@ -109,9 +109,9 @@ class GlBufferObject {
   }
 
   @Deprecated('Prefer DSA')
-  void bind() => gl.bindBuffer(glShaderStorageBuffer, _id);
+  void bind() => gl.bindBuffer(type, _id);
   @Deprecated('Prefer DSA')
-  void unbind() => gl.bindBuffer(glShaderStorageBuffer, 0);
+  void unbind() => gl.bindBuffer(type, 0);
 
   void delete() {
     final idPointer = malloc<UnsignedInt>();
