@@ -169,14 +169,14 @@ final class BufferWriter {
   BufferWriter([int initialSize = 64]) : _data = ByteData(64);
   factory BufferWriter.native([int initialSize = 64]) => NativeBufferWriter._(initialSize);
 
-  void uint(int f) {
+  void u32(int f) {
     _ensureCapacity(_uint32Size);
 
     _data.setUint32(_cursor, f, Endian.host);
     _cursor += _uint32Size;
   }
 
-  void uint2(int a, int b) {
+  void u32x2(int a, int b) {
     _ensureCapacity(_uint32Size * 2);
 
     _data
@@ -185,7 +185,7 @@ final class BufferWriter {
     _cursor += _uint32Size * 2;
   }
 
-  void uint3(int a, int b, int c) {
+  void u32x3(int a, int b, int c) {
     _ensureCapacity(_uint32Size * 3);
 
     _data
@@ -195,7 +195,7 @@ final class BufferWriter {
     _cursor += _uint32Size * 3;
   }
 
-  void uint4(int a, int b, int c, int d) {
+  void u32x4(int a, int b, int c, int d) {
     _ensureCapacity(_uint32Size * 4);
 
     _data
@@ -206,14 +206,14 @@ final class BufferWriter {
     _cursor += _uint32Size * 4;
   }
 
-  void float(double f) {
+  void f32(double f) {
     _ensureCapacity(_float32Size);
 
     _data.setFloat32(_cursor, f, Endian.host);
     _cursor += _float32Size;
   }
 
-  void float2(double a, double b) {
+  void f32x2(double a, double b) {
     _ensureCapacity(_float32Size * 2);
 
     _data
@@ -222,7 +222,7 @@ final class BufferWriter {
     _cursor += _float32Size * 2;
   }
 
-  void float3(double a, double b, double c) {
+  void f32x3(double a, double b, double c) {
     _ensureCapacity(_float32Size * 3);
 
     _data
@@ -232,7 +232,7 @@ final class BufferWriter {
     _cursor += _float32Size * 3;
   }
 
-  void float4(double a, double b, double c, double d) {
+  void f32x4(double a, double b, double c, double d) {
     _ensureCapacity(_float32Size * 4);
 
     _data
@@ -270,11 +270,15 @@ final class BufferWriter {
 }
 
 final class NativeBufferWriter extends BufferWriter {
+  static final _finalizer = Finalizer<Pointer<Uint8>>(malloc.free);
+
   late Pointer<Uint8> _pointer;
 
   NativeBufferWriter._(int initialSize) {
     _pointer = malloc<Uint8>(initialSize);
     _data = _pointer.asTypedList(initialSize).buffer.asByteData();
+
+    _finalizer.attach(this, _pointer);
   }
 
   @override
