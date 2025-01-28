@@ -1,22 +1,20 @@
 name: diamond_gl
-description: A starting point for Dart libraries or applications.
-version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+description: A low-level GLFW/OpenGL abstraction for building basic rendering pipelines
+version: 0.1.0
+repository: https://github.com/gliscowo/diamond_gl
 
 environment:
   sdk: ^3.3.0
 
-publish_to: none
+publish_to: https://pub.wispforest.io
 
 dependencies:
   dart_glfw:
-    git:
-      url: 'https://github.com/gliscowo/dart_glfw.git'
-      ref: 73982bd
+    hosted: https://pub.wispforest.io
+    version: ^0.1.1
   dart_opengl:
-    git:
-      url: 'https://github.com/gliscowo/dart_opengl.git'
-      ref: 443eeb7
+    hosted: https://pub.wispforest.io
+    version: ^0.1.1
   ffi: ^2.1.2
   image: ^4.5.2
   logging: ^1.2.0
