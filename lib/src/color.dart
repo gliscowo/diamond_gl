@@ -59,4 +59,10 @@ class Color {
   String toHexString(bool alpha) {
     return alpha ? argb.toRadixString(16).padLeft(8, '0') : rgb.toRadixString(16).padLeft(6, '0');
   }
+
+  @override
+  int get hashCode => _storage.hashCode;
+
+  @override
+  bool operator ==(Object other) => other is Color && other._storage == _storage;
 }
