@@ -1,68 +1,72 @@
 import 'package:vector_math/vector_math.dart';
 
 class Color {
-  final Vector4 _storage;
+  final double r, g, b, a;
 
-  static final Color black = Color.rgb(0, 0, 0);
-  static final Color white = Color.rgb(1, 1, 1);
-  static final Color red = Color.rgb(1, 0, 0);
-  static final Color green = Color.rgb(0, 1, 0);
-  static final Color blue = Color.rgb(0, 0, 1);
+  static const Color black = Color.rgb(0x000000);
+  static const Color white = Color.rgb(0xFFFFFF);
+  static const Color red = Color.rgb(0xFF0000);
+  static const Color green = Color.rgb(0x00FF00);
+  static const Color blue = Color.rgb(0x0000FF);
 
-  Color(Vector4 color) : _storage = Vector4.copy(color);
+  const Color(int argb)
+      : this.values(
+          ((argb >> 16) & 0xFF) / 255,
+          ((argb >> 8) & 0xFF) / 255,
+          (argb & 0xFF) / 255,
+          (argb >>> 24) / 255,
+        );
 
-  Color.rgb(double red, double green, double blue, [double alpha = 1]) : this(Vector4(red, green, blue, alpha));
+  const Color.rgb(int rgb)
+      : this.values(
+          ((rgb >> 16) & 0xFF) / 255,
+          ((rgb >> 8) & 0xFF) / 255,
+          (rgb & 0xFF) / 255,
+        );
 
-  factory Color.ofArgb(int argb) {
-    return Color.rgb(
-      ((argb >> 16) & 0xFF) / 255,
-      ((argb >> 8) & 0xFF) / 255,
-      (argb & 0xFF) / 255,
-      (argb >>> 24) / 255,
-    );
-  }
+  const Color.values(double red, double green, double blue, [double alpha = 1])
+      : r = red,
+        g = green,
+        b = blue,
+        a = alpha;
 
-  factory Color.ofRgb(int rgb) {
-    return Color.rgb(
-      ((rgb >> 16) & 0xFF) / 255,
-      ((rgb >> 8) & 0xFF) / 255,
-      (rgb & 0xFF) / 255,
-    );
-  }
+  Color.ofVector(Vector4 color)
+      : this.values(
+          color.r,
+          color.g,
+          color.b,
+          color.a,
+        );
 
   factory Color.ofHsv(double hue, double saturation, double value, [double alpha = 1]) {
-    final rgbColor = Vector4.zero();
-    Colors.hsvToRgb(Vector4(hue, saturation, value, alpha), rgbColor);
-    return Color(rgbColor);
+    final rgbColor = Vector4(hue, saturation, value, alpha);
+    Colors.hsvToRgb(rgbColor, rgbColor);
+    return Color.ofVector(rgbColor);
   }
-
-  double get r => _storage.r;
-  double get g => _storage.g;
-  double get b => _storage.b;
-  double get a => _storage.a;
 
   int get rgb => (r * 255).toInt() << 16 | (g * 255).toInt() << 8 | (b * 255).toInt();
 
   int get argb => (a * 255).toInt() << 24 | (r * 255).toInt() << 16 | (g * 255).toInt() << 8 | (b * 255).toInt();
 
   Vector4 get hsv {
-    final hsv = Vector4.zero();
-    Colors.rgbToHsv(_storage, hsv);
+    final hsv = asVector();
+    Colors.rgbToHsv(hsv, hsv);
+
     return hsv;
   }
 
   Color copyWith({double? r, double? g, double? b, double? a}) =>
-      Color.rgb(r ?? this.r, g ?? this.g, b ?? this.b, a ?? this.a);
+      Color.values(r ?? this.r, g ?? this.g, b ?? this.b, a ?? this.a);
 
-  Vector4 asVector() => Vector4.copy(_storage);
+  Vector4 asVector() => Vector4(r, g, b, a);
 
   String toHexString(bool alpha) {
     return alpha ? argb.toRadixString(16).padLeft(8, '0') : rgb.toRadixString(16).padLeft(6, '0');
   }
 
   @override
-  int get hashCode => _storage.hashCode;
+  int get hashCode => Object.hash(r, g, b, a);
 
   @override
-  bool operator ==(Object other) => other is Color && other._storage == _storage;
+  bool operator ==(Object other) => other is Color && other.r == r && other.g == g && other.b == b && other.a == a;
 }
