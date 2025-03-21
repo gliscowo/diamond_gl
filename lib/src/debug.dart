@@ -52,8 +52,17 @@ void _onGlError(
 ) {
   if (_glLogger == null || severity < DiamondGLDebugSettings.minGlDebugSeverity) return;
 
-  _glLogger!.warning(
-      'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}');
+  final logMessage =
+      'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}';
+
+  if (severity > glDebugSeverityLow) {
+    _glLogger!.warning(logMessage);
+  } else if (severity > glDebugSeverityNotification) {
+    _glLogger!.info(logMessage);
+  } else {
+    _glLogger!.fine(logMessage);
+  }
+
   if (DiamondGLDebugSettings.printGlDebugStacktrace) _glLogger!.warning(StackTrace.current);
 }
 
