@@ -13,6 +13,7 @@ typedef _GLFWwindowposfun = Void Function(Pointer<GLFWwindow>, Int, Int);
 
 typedef _GLFWkeyfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int, Int);
 typedef _GLFWcharfun = Void Function(Pointer<GLFWwindow>, UnsignedInt);
+typedef _GLFWcharmodsfun = Void Function(Pointer<GLFWwindow>, UnsignedInt, Int);
 typedef _GLFWcursorposfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 typedef _GLFWscrollfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 typedef _GLFWmousebuttonfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int);
@@ -37,7 +38,8 @@ class Window {
 
   late final Pointer<GLFWwindow> _handle;
   final StreamController<Window> _resizeListeners = StreamController.broadcast(sync: true);
-  final StreamController<int> _charInputListeners = StreamController.broadcast(sync: true);
+  final StreamController<CharEvent> _charInputListeners = StreamController.broadcast(sync: true);
+  final StreamController<CharModsEvent> _charModsListeners = StreamController.broadcast(sync: true);
   final StreamController<KeyInputEvent> _keyInputListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseInputEvent> _mouseInputListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseMoveEvent> _mouseMoveListeners = StreamController.broadcast(sync: true);
@@ -105,6 +107,7 @@ class Window {
     glfw.setMouseButtonCallback(_handle, Pointer.fromFunction<_GLFWmousebuttonfun>(_onMouseButton));
     glfw.setScrollCallback(_handle, Pointer.fromFunction<_GLFWscrollfun>(_onScroll));
     glfw.setCharCallback(_handle, Pointer.fromFunction<_GLFWcharfun>(_onChar));
+    glfw.setCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
     glfw.setKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
   }
 
@@ -132,7 +135,7 @@ class Window {
 
     final deltaX = mouseX - window._cursorPos.x, deltaY = mouseY - window._cursorPos.y;
     if (deltaX != 0 || deltaY != 0) {
-      window._mouseMoveListeners.add(MouseMoveEvent(deltaX, deltaY));
+      window._mouseMoveListeners.add((deltaX: deltaX, deltaY: deltaY));
     }
 
     window._cursorPos.x = mouseX;
@@ -143,28 +146,35 @@ class Window {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
-    window._mouseInputListeners.add(MouseInputEvent(button, action, mods));
+    window._mouseInputListeners.add((button: button, action: action, mods: mods));
   }
 
   static void _onScroll(Pointer<GLFWwindow> handle, double xOffset, double yOffset) {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
-    window._mouseScrollListeners.add(MouseScrollEvent(xOffset, yOffset));
+    window._mouseScrollListeners.add((xOffset: xOffset, yOffset: yOffset));
   }
 
   static void _onChar(Pointer<GLFWwindow> handle, int codepoint) {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
-    window._charInputListeners.add(codepoint);
+    window._charInputListeners.add((codepoint: codepoint));
+  }
+
+  static void _onCharMods(Pointer<GLFWwindow> handle, int codepoint, int mods) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._charModsListeners.add((codepoint: codepoint, mods: mods));
   }
 
   static void _onKey(Pointer<GLFWwindow> handle, int key, int scancode, int action, int mods) {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
-    window._keyInputListeners.add(KeyInputEvent(key, scancode, action, mods));
+    window._keyInputListeners.add((key: key, scancode: scancode, action: action, mods: mods));
   }
 
   void activateContext() => glfw.makeContextCurrent(_handle);
@@ -254,7 +264,8 @@ class Window {
   Vector2 get cursorPos => _cursorPos.xy;
 
   Stream<Window> get onResize => _resizeListeners.stream;
-  Stream<int> get onChar => _charInputListeners.stream;
+  Stream<CharEvent> get onChar => _charInputListeners.stream;
+  Stream<CharModsEvent> get onCharMods => _charModsListeners.stream;
   Stream<KeyInputEvent> get onKey => _keyInputListeners.stream;
   Stream<MouseInputEvent> get onMouseButton => _mouseInputListeners.stream;
   Stream<MouseMoveEvent> get onMouseMove => _mouseMoveListeners.stream;
@@ -267,25 +278,12 @@ class Window {
   Pointer<GLFWwindow> get handle => _handle;
 }
 
-class KeyInputEvent {
-  final int key, scancode, action, mods;
-  KeyInputEvent(this.key, this.scancode, this.action, this.mods);
-}
-
-class MouseInputEvent {
-  final int button, action, mods;
-  MouseInputEvent(this.button, this.action, this.mods);
-}
-
-class MouseMoveEvent {
-  final double deltaX, deltaY;
-  MouseMoveEvent(this.deltaX, this.deltaY);
-}
-
-class MouseScrollEvent {
-  final double xOffset, yOffset;
-  MouseScrollEvent(this.xOffset, this.yOffset);
-}
+typedef KeyInputEvent = ({int key, int scancode, int action, int mods});
+typedef CharEvent = ({int codepoint});
+typedef CharModsEvent = ({int codepoint, int mods});
+typedef MouseInputEvent = ({int button, int action, int mods});
+typedef MouseMoveEvent = ({double deltaX, double deltaY});
+typedef MouseScrollEvent = ({double xOffset, double yOffset});
 
 class WindowInitializationException {
   final int glfwErrorCode;
