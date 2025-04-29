@@ -17,6 +17,7 @@ typedef _GLFWcharmodsfun = Void Function(Pointer<GLFWwindow>, UnsignedInt, Int);
 typedef _GLFWcursorposfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 typedef _GLFWscrollfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 typedef _GLFWmousebuttonfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int);
+typedef _GLFWdropfun = Void Function(Pointer<GLFWwindow>, Int, Pointer<Pointer<Char>>);
 
 class OpenGLVersion {
   final int major, minor;
@@ -44,6 +45,7 @@ class Window {
   final StreamController<MouseInputEvent> _mouseInputListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseMoveEvent> _mouseMoveListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseScrollEvent> _mouseScrollListeners = StreamController.broadcast(sync: true);
+  final StreamController<FilesDroppedEvent> _dropListeners = StreamController.broadcast(sync: true);
   final Vector2 _cursorPos = Vector2.zero();
 
   late int _x;
@@ -109,6 +111,7 @@ class Window {
     glfw.setCharCallback(_handle, Pointer.fromFunction<_GLFWcharfun>(_onChar));
     glfw.setCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
     glfw.setKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
+    glfw.setDropCallback(_handle, Pointer.fromFunction<_GLFWdropfun>(_onDrop));
   }
 
   static void _onMove(Pointer<GLFWwindow> handle, int x, int y) {
@@ -175,6 +178,18 @@ class Window {
     final window = _knownWindows[handle.address]!;
 
     window._keyInputListeners.add((key: key, scancode: scancode, action: action, mods: mods));
+  }
+
+  static void _onDrop(Pointer<GLFWwindow> handle, int pathCount, Pointer<Pointer<Char>> nativePaths) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    final paths = List.filled(pathCount, '');
+    for (var i = 0; i < pathCount; i++) {
+      paths[i] = nativePaths[i].cast<Utf8>().toDartString();
+    }
+
+    window._dropListeners.add((paths: paths));
   }
 
   void activateContext() => glfw.makeContextCurrent(_handle);
@@ -270,6 +285,7 @@ class Window {
   Stream<MouseInputEvent> get onMouseButton => _mouseInputListeners.stream;
   Stream<MouseMoveEvent> get onMouseMove => _mouseMoveListeners.stream;
   Stream<MouseScrollEvent> get onMouseScroll => _mouseScrollListeners.stream;
+  Stream<FilesDroppedEvent> get onFilesDropped => _dropListeners.stream;
 
   int get x => _x;
   int get y => _y;
@@ -284,6 +300,7 @@ typedef CharModsEvent = ({int codepoint, int mods});
 typedef MouseInputEvent = ({int button, int action, int mods});
 typedef MouseMoveEvent = ({double deltaX, double deltaY});
 typedef MouseScrollEvent = ({double xOffset, double yOffset});
+typedef FilesDroppedEvent = ({List<String> paths});
 
 class WindowInitializationException {
   final int glfwErrorCode;
