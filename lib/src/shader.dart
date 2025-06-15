@@ -134,6 +134,22 @@ class GlProgram {
     gl.programUniform4f(_id, _uniformLocation(uniform), x, y, z, w);
   }
 
+  void uniform1i(String uniform, int value) {
+    gl.programUniform1i(_id, _uniformLocation(uniform), value);
+  }
+
+  void uniform2i(String uniform, int x, int y) {
+    gl.programUniform2i(_id, _uniformLocation(uniform), x, y);
+  }
+
+  void uniform3i(String uniform, int x, int y, int z) {
+    gl.programUniform3i(_id, _uniformLocation(uniform), x, y, z);
+  }
+
+  void uniform4i(String uniform, int x, int y, int z, int w) {
+    gl.programUniform4i(_id, _uniformLocation(uniform), x, y, z, w);
+  }
+
   void uniformSampler(String uniform, int texture, int index) {
     gl.programUniform1i(_id, _uniformLocation(uniform), index);
     gl.bindTextureUnit(index, texture);
