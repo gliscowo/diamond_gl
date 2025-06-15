@@ -1,6 +1,6 @@
 name: diamond_gl
 description: A low-level GLFW/OpenGL abstraction for building basic rendering pipelines
-version: 1.3.0
+version: 1.3.1
 repository: https://github.com/gliscowo/diamond_gl
 
 environment:

@@ -278,7 +278,7 @@ final class NativeBufferWriter extends BufferWriter {
     _pointer = malloc<Uint8>(initialSize);
     _data = _pointer.asTypedList(initialSize).buffer.asByteData();
 
-    _finalizer.attach(this, _pointer);
+    _finalizer.attach(this, _pointer, detach: this);
   }
 
   @override
@@ -294,8 +294,13 @@ final class NativeBufferWriter extends BufferWriter {
 
     final newPointer = malloc<Uint8>(_data.lengthInBytes * 2);
     newPointer.asTypedList(_data.lengthInBytes * 2).setRange(0, _data.lengthInBytes, _data.buffer.asUint8List());
+
+    _finalizer.detach(this);
     malloc.free(_pointer);
+
     _pointer = newPointer;
+    _finalizer.attach(this, _pointer, detach: this);
+
     _data = _pointer.asTypedList(_data.lengthInBytes * 2).buffer.asByteData();
   }
 }
