@@ -38,14 +38,7 @@ class VertexDescriptor<VertexFunction extends Function> {
 
       gl.enableVertexArrayAttrib(vao, location);
       gl.vertexArrayAttribBinding(vao, location, 0);
-      gl.vertexArrayAttribFormat(
-        vao,
-        location,
-        attr.count,
-        attr.element.glType,
-        glFalse,
-        attr.offset,
-      );
+      gl.vertexArrayAttribFormat(vao, location, attr.count, attr.element.glType, glFalse, attr.offset);
     }
   }
 

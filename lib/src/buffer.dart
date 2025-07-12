@@ -18,8 +18,8 @@ class MeshBuffer<VF extends Function> {
   late VF _vertex;
 
   MeshBuffer(VertexDescriptor<VF> descriptor, this.program, {int initialBufferSize = 1024})
-      : _descriptor = descriptor,
-        _buffer = BufferWriter(initialBufferSize) {
+    : _descriptor = descriptor,
+      _buffer = BufferWriter(initialBufferSize) {
     gl.vertexArrayVertexBuffer(_vao._id, 0, _vbo._id, 0, descriptor.vertexSize);
     descriptor.prepareAttributes(_vao._id, program);
 

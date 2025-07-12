@@ -8,26 +8,32 @@ import 'package:vector_math/vector_math.dart';
 
 import 'diamond_gl_base.dart';
 
-typedef _GLFWwindowresizefun = Void Function(Pointer<GLFWwindow>, Int, Int);
 typedef _GLFWwindowposfun = Void Function(Pointer<GLFWwindow>, Int, Int);
+typedef _GLFWwindowsizefun = Void Function(Pointer<GLFWwindow>, Int, Int);
+typedef _GLFWwindowclosefun = Void Function(Pointer<GLFWwindow>);
+typedef _GLFWwindowrefreshfun = Void Function(Pointer<GLFWwindow>);
+typedef _GLFWwindowfocusfun = Void Function(Pointer<GLFWwindow>, Int);
+typedef _GLFWwindowiconifyfun = Void Function(Pointer<GLFWwindow>, Int);
+typedef _GLFWwindowmaximizefun = Void Function(Pointer<GLFWwindow>, Int);
+typedef _GLFWframebuffersizefun = Void Function(Pointer<GLFWwindow>, Int, Int);
+typedef _GLFWwindowcontentscalefun = Void Function(Pointer<GLFWwindow>, Float, Float);
+
+typedef _GLFWmousebuttonfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int);
+typedef _GLFWcursorposfun = Void Function(Pointer<GLFWwindow>, Double, Double);
+typedef _GLFWcursorenterfun = Void Function(Pointer<GLFWwindow>, Int);
+typedef _GLFWscrollfun = Void Function(Pointer<GLFWwindow>, Double, Double);
 
 typedef _GLFWkeyfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int, Int);
 typedef _GLFWcharfun = Void Function(Pointer<GLFWwindow>, UnsignedInt);
 typedef _GLFWcharmodsfun = Void Function(Pointer<GLFWwindow>, UnsignedInt, Int);
-typedef _GLFWcursorposfun = Void Function(Pointer<GLFWwindow>, Double, Double);
-typedef _GLFWscrollfun = Void Function(Pointer<GLFWwindow>, Double, Double);
-typedef _GLFWmousebuttonfun = Void Function(Pointer<GLFWwindow>, Int, Int, Int);
+
 typedef _GLFWdropfun = Void Function(Pointer<GLFWwindow>, Int, Pointer<Pointer<Char>>);
 
 class OpenGLVersion {
   final int major, minor;
   final bool coreProfile;
 
-  const OpenGLVersion(
-    this.major,
-    this.minor, {
-    this.coreProfile = false,
-  });
+  const OpenGLVersion(this.major, this.minor, {this.coreProfile = false});
 }
 
 class Window {
@@ -38,18 +44,33 @@ class Window {
   static final Map<int, Window> _knownWindows = {};
 
   late final Pointer<GLFWwindow> _handle;
-  final StreamController<Window> _resizeListeners = StreamController.broadcast(sync: true);
-  final StreamController<CharEvent> _charInputListeners = StreamController.broadcast(sync: true);
-  final StreamController<CharModsEvent> _charModsListeners = StreamController.broadcast(sync: true);
-  final StreamController<KeyInputEvent> _keyInputListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowMoveEvent> _moveListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowResizeEvent> _resizeListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowCloseEvent> _closeListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowRefreshEvent> _refreshListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowFocusEvent> _focusListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowIconifyEvent> _iconifyListeners = StreamController.broadcast(sync: true);
+  final StreamController<WindowMaximizeEvent> _maximizeListeners = StreamController.broadcast(sync: true);
+  final StreamController<FramebufferResizeEvent> _framebufferResizeListeners = StreamController.broadcast(sync: true);
+  final StreamController<ContentRescaleEvent> _rescaleListeners = StreamController.broadcast(sync: true);
+
   final StreamController<MouseInputEvent> _mouseInputListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseMoveEvent> _mouseMoveListeners = StreamController.broadcast(sync: true);
+  final StreamController<MouseEnterEvent> _mouseEnterListeners = StreamController.broadcast(sync: true);
+  final StreamController<MouseLeaveEvent> _mouseLeaveListeners = StreamController.broadcast(sync: true);
   final StreamController<MouseScrollEvent> _mouseScrollListeners = StreamController.broadcast(sync: true);
-  final StreamController<FilesDroppedEvent> _dropListeners = StreamController.broadcast(sync: true);
-  final Vector2 _cursorPos = Vector2.zero();
 
+  final StreamController<KeyInputEvent> _keyInputListeners = StreamController.broadcast(sync: true);
+  final StreamController<CharEvent> _charInputListeners = StreamController.broadcast(sync: true);
+  final StreamController<CharModsEvent> _charModsListeners = StreamController.broadcast(sync: true);
+
+  final StreamController<FilesDroppedEvent> _dropListeners = StreamController.broadcast(sync: true);
+
+  final Vector2 _cursorPos = Vector2.zero();
   late int _x;
   late int _y;
+  late int _framebufferWidth;
+  late int _framebufferHeight;
   int _width;
   int _height;
 
@@ -79,44 +100,62 @@ class Window {
     if (msaaSamples != 0) glfw.windowHint(glfwSamples, msaaSamples);
     if (debug) glfw.windowHint(glfwOpenglDebugContext, glfwTrue);
 
-    _handle = title.withAsNative((utf8) => glfw.createWindow(width, height, utf8.cast(), nullptr, nullptr));
+    using((arena) {
+      _handle = glfw.createWindow(width, height, title.toNativeUtf8(allocator: arena).cast(), nullptr, nullptr);
 
-    if (_handle.address == 0) {
-      final stringPtr = malloc<Pointer<Utf8>>();
-      final errorCode = glfw.getError(stringPtr.cast());
+      if (_handle.address == 0) {
+        final stringPtr = arena<Pointer<Utf8>>();
+        final errorCode = glfw.getError(stringPtr.cast());
 
-      final errorDescription = stringPtr.value.toDartString();
-      malloc.free(stringPtr);
+        final errorDescription = stringPtr.value.toDartString();
 
-      glfw.terminate();
-      throw WindowInitializationException(errorCode, errorDescription);
-    }
+        glfw.terminate();
+        throw WindowInitializationException(errorCode, errorDescription);
+      }
 
-    final windowX = malloc<Int>();
-    final windowY = malloc<Int>();
+      final x = arena<Int>();
+      final y = arena<Int>();
 
-    glfw.getWindowPos(_handle, windowX, windowY);
-    _x = windowX.value;
-    _y = windowY.value;
+      glfw.getWindowPos(_handle, x, y);
+      _x = x.value;
+      _y = y.value;
 
-    malloc.free(windowX);
-    malloc.free(windowY);
+      glfw.getFramebufferSize(_handle, x, y);
+      _framebufferWidth = x.value;
+      _framebufferHeight = y.value;
+    });
 
     _knownWindows[_handle.address] = this;
-    glfw.setWindowSizeCallback(_handle, Pointer.fromFunction<_GLFWwindowresizefun>(_onResize));
     glfw.setWindowPosCallback(_handle, Pointer.fromFunction<_GLFWwindowposfun>(_onMove));
-    glfw.setCursorPosCallback(_handle, Pointer.fromFunction<_GLFWcursorposfun>(_onMousePos));
+    glfw.setWindowSizeCallback(_handle, Pointer.fromFunction<_GLFWwindowsizefun>(_onResize));
+    glfw.setWindowCloseCallback(_handle, Pointer.fromFunction<_GLFWwindowclosefun>(_onClose));
+    glfw.setWindowRefreshCallback(_handle, Pointer.fromFunction<_GLFWwindowrefreshfun>(_onRefresh));
+    glfw.setWindowFocusCallback(_handle, Pointer.fromFunction<_GLFWwindowfocusfun>(_onFocus));
+    glfw.setWindowIconifyCallback(_handle, Pointer.fromFunction<_GLFWwindowiconifyfun>(_onIconify));
+    glfw.setWindowMaximizeCallback(_handle, Pointer.fromFunction<_GLFWwindowmaximizefun>(_onMaximize));
+    glfw.setFramebufferSizeCallback(_handle, Pointer.fromFunction<_GLFWframebuffersizefun>(_onFramebufferResize));
+    glfw.setWindowContentScaleCallback(_handle, Pointer.fromFunction<_GLFWwindowcontentscalefun>(_onContentRescale));
+
     glfw.setMouseButtonCallback(_handle, Pointer.fromFunction<_GLFWmousebuttonfun>(_onMouseButton));
+    glfw.setCursorPosCallback(_handle, Pointer.fromFunction<_GLFWcursorposfun>(_onMousePos));
+    glfw.setCursorEnterCallback(_handle, Pointer.fromFunction<_GLFWcursorenterfun>(_onMouseEnter));
     glfw.setScrollCallback(_handle, Pointer.fromFunction<_GLFWscrollfun>(_onScroll));
+
+    glfw.setKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
     glfw.setCharCallback(_handle, Pointer.fromFunction<_GLFWcharfun>(_onChar));
     glfw.setCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
-    glfw.setKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
+
     glfw.setDropCallback(_handle, Pointer.fromFunction<_GLFWdropfun>(_onDrop));
   }
 
   static void _onMove(Pointer<GLFWwindow> handle, int x, int y) {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
+
+    final deltaX = x - window._x, deltaY = y - window._y;
+    if (deltaX != 0 || deltaY != 0) {
+      window._moveListeners.add((deltaX: deltaX, deltaY: deltaY));
+    }
 
     window._x = x;
     window._y = y;
@@ -129,7 +168,66 @@ class Window {
     window._width = width;
     window._height = height;
 
-    window._resizeListeners.add(window);
+    window._resizeListeners.add((newWidth: width, newHeight: height));
+  }
+
+  static void _onClose(Pointer<GLFWwindow> handle) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._closeListeners.add(const ());
+  }
+
+  static void _onRefresh(Pointer<GLFWwindow> handle) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._refreshListeners.add(const ());
+  }
+
+  static void _onFocus(Pointer<GLFWwindow> handle, int focus) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._focusListeners.add((nowFocused: focus == glfwTrue));
+  }
+
+  static void _onIconify(Pointer<GLFWwindow> handle, int iconify) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._iconifyListeners.add((nowIconified: iconify == glfwTrue));
+  }
+
+  static void _onMaximize(Pointer<GLFWwindow> handle, int maximize) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._maximizeListeners.add((nowMaximized: maximize == glfwTrue));
+  }
+
+  static void _onFramebufferResize(Pointer<GLFWwindow> handle, int width, int height) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._framebufferWidth = width;
+    window._framebufferHeight = height;
+
+    window._framebufferResizeListeners.add((newWidth: width, newHeight: height));
+  }
+
+  static void _onContentRescale(Pointer<GLFWwindow> handle, double xScale, double yScale) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._rescaleListeners.add((xScale: xScale, yScale: yScale));
+  }
+
+  static void _onMouseButton(Pointer<GLFWwindow> handle, int button, int action, int mods) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._mouseInputListeners.add((button: button, action: action, mods: mods));
   }
 
   static void _onMousePos(Pointer<GLFWwindow> handle, double mouseX, double mouseY) {
@@ -145,11 +243,11 @@ class Window {
     window._cursorPos.y = mouseY;
   }
 
-  static void _onMouseButton(Pointer<GLFWwindow> handle, int button, int action, int mods) {
+  static void _onMouseEnter(Pointer<GLFWwindow> handle, int enter) {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
-    window._mouseInputListeners.add((button: button, action: action, mods: mods));
+    (enter == glfwTrue ? window._mouseEnterListeners : window._mouseLeaveListeners).add(const ());
   }
 
   static void _onScroll(Pointer<GLFWwindow> handle, double xOffset, double yOffset) {
@@ -157,6 +255,13 @@ class Window {
     final window = _knownWindows[handle.address]!;
 
     window._mouseScrollListeners.add((xOffset: xOffset, yOffset: yOffset));
+  }
+
+  static void _onKey(Pointer<GLFWwindow> handle, int key, int scancode, int action, int mods) {
+    if (!_knownWindows.containsKey(handle.address)) return;
+    final window = _knownWindows[handle.address]!;
+
+    window._keyInputListeners.add((key: key, scancode: scancode, action: action, mods: mods));
   }
 
   static void _onChar(Pointer<GLFWwindow> handle, int codepoint) {
@@ -171,13 +276,6 @@ class Window {
     final window = _knownWindows[handle.address]!;
 
     window._charModsListeners.add((codepoint: codepoint, mods: mods));
-  }
-
-  static void _onKey(Pointer<GLFWwindow> handle, int key, int scancode, int action, int mods) {
-    if (!_knownWindows.containsKey(handle.address)) return;
-    final window = _knownWindows[handle.address]!;
-
-    window._keyInputListeners.add((key: key, scancode: scancode, action: action, mods: mods));
   }
 
   static void _onDrop(Pointer<GLFWwindow> handle, int pathCount, Pointer<Pointer<Char>> nativePaths) {
@@ -231,7 +329,9 @@ class Window {
     if (value == _title) return;
 
     _title = value;
-    value.withAsNative((utf8) => glfw.setWindowTitle(_handle, utf8.cast()));
+    using((arena) {
+      glfw.setWindowTitle(_handle, title.toNativeUtf8(allocator: arena).cast());
+    });
   }
 
   void setIcon(Image icon) {
@@ -260,6 +360,11 @@ class Window {
     glfw.pollEvents();
   }
 
+  void dispose() {
+    glfw.destroyWindow(_handle);
+    _knownWindows.remove(_handle.address);
+  }
+
   double get cursorX => _cursorPos.x;
   set cursorX(double value) {
     if (value == _cursorPos.x) return;
@@ -278,28 +383,57 @@ class Window {
 
   Vector2 get cursorPos => _cursorPos.xy;
 
-  Stream<Window> get onResize => _resizeListeners.stream;
-  Stream<CharEvent> get onChar => _charInputListeners.stream;
-  Stream<CharModsEvent> get onCharMods => _charModsListeners.stream;
-  Stream<KeyInputEvent> get onKey => _keyInputListeners.stream;
+  Stream<WindowMoveEvent> get onMove => _moveListeners.stream;
+  Stream<WindowResizeEvent> get onResize => _resizeListeners.stream;
+  Stream<WindowCloseEvent> get onClose => _closeListeners.stream;
+  Stream<WindowRefreshEvent> get onRefresh => _refreshListeners.stream;
+  Stream<WindowFocusEvent> get onFocus => _focusListeners.stream;
+  Stream<WindowIconifyEvent> get onIconify => _iconifyListeners.stream;
+  Stream<WindowMaximizeEvent> get onMaximize => _maximizeListeners.stream;
+  Stream<FramebufferResizeEvent> get onFramebufferResize => _framebufferResizeListeners.stream;
+  Stream<ContentRescaleEvent> get onContentRescale => _rescaleListeners.stream;
+
   Stream<MouseInputEvent> get onMouseButton => _mouseInputListeners.stream;
   Stream<MouseMoveEvent> get onMouseMove => _mouseMoveListeners.stream;
+  Stream<MouseEnterEvent> get onMouseEnter => _mouseEnterListeners.stream;
+  Stream<MouseLeaveEvent> get onMouseLeave => _mouseLeaveListeners.stream;
   Stream<MouseScrollEvent> get onMouseScroll => _mouseScrollListeners.stream;
+
+  Stream<KeyInputEvent> get onKey => _keyInputListeners.stream;
+  Stream<CharEvent> get onChar => _charInputListeners.stream;
+  Stream<CharModsEvent> get onCharMods => _charModsListeners.stream;
+
   Stream<FilesDroppedEvent> get onFilesDropped => _dropListeners.stream;
 
   int get x => _x;
   int get y => _y;
   int get width => _width;
   int get height => _height;
+  int get framebufferWidth => _framebufferWidth;
+  int get framebufferHeight => _framebufferHeight;
   Pointer<GLFWwindow> get handle => _handle;
 }
+
+typedef WindowMoveEvent = ({int deltaX, int deltaY});
+typedef WindowResizeEvent = ({int newWidth, int newHeight});
+typedef WindowCloseEvent = ();
+typedef WindowRefreshEvent = ();
+typedef WindowFocusEvent = ({bool nowFocused});
+typedef WindowIconifyEvent = ({bool nowIconified});
+typedef WindowMaximizeEvent = ({bool nowMaximized});
+typedef FramebufferResizeEvent = ({int newWidth, int newHeight});
+typedef ContentRescaleEvent = ({double xScale, double yScale});
+
+typedef MouseInputEvent = ({int button, int action, int mods});
+typedef MouseMoveEvent = ({double deltaX, double deltaY});
+typedef MouseEnterEvent = ();
+typedef MouseLeaveEvent = ();
+typedef MouseScrollEvent = ({double xOffset, double yOffset});
 
 typedef KeyInputEvent = ({int key, int scancode, int action, int mods});
 typedef CharEvent = ({int codepoint});
 typedef CharModsEvent = ({int codepoint, int mods});
-typedef MouseInputEvent = ({int button, int action, int mods});
-typedef MouseMoveEvent = ({double deltaX, double deltaY});
-typedef MouseScrollEvent = ({double xOffset, double yOffset});
+
 typedef FilesDroppedEvent = ({List<String> paths});
 
 class WindowInitializationException {

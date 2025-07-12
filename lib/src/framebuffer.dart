@@ -15,13 +15,13 @@ class GlFramebuffer {
 
   GlFramebuffer(this._width, this._height, {bool stencil = false}) {
     _stencil = stencil;
-    _initGlState();
+    _createFboAndTextures();
   }
 
   factory GlFramebuffer.trackingWindow(Window window, {bool stencil = false}) =>
-      GlFramebuffer(window.width, window.height, stencil: stencil)..trackWindow(window);
+      GlFramebuffer(window.framebufferWidth, window.framebufferHeight, stencil: stencil)..trackWindow(window);
 
-  void _initGlState() {
+  void _createFboAndTextures() {
     final idPointer = malloc<UnsignedInt>();
     gl.createFramebuffers(1, idPointer);
     _fbo = idPointer.value;
@@ -49,12 +49,12 @@ class GlFramebuffer {
   }
 
   void trackWindow(Window window) {
-    window.onResize.listen((window) {
-      _width = window.width;
-      _height = window.height;
+    window.onFramebufferResize.listen((event) {
+      _width = event.newWidth;
+      _height = event.newHeight;
 
       delete();
-      _initGlState();
+      _createFboAndTextures();
     });
   }
 
@@ -101,7 +101,7 @@ class GlFramebuffer {
         (true, true) => glFramebuffer,
         (true, false) => glDrawFramebuffer,
         (false, true) => glReadFramebuffer,
-        _ => throw ArgumentError('Either draw or read must be set')
+        _ => throw ArgumentError('Either draw or read must be set'),
       };
 
   int _genGlObject(void Function(int, Pointer<UnsignedInt>) factory) {

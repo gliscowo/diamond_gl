@@ -40,33 +40,28 @@ class GlShader {
   int get id => _id;
 
   void _loadAndCompile(String sourceName, String source) {
-    final sourceBuffer = source.toNativeUtf8();
+    using((arena) {
+      final sourceBuffer = source.toNativeUtf8();
 
-    final sourceArray = malloc<Pointer<Utf8>>();
-    sourceArray[0] = sourceBuffer;
+      final sourceArray = arena<Pointer<Utf8>>();
+      sourceArray[0] = sourceBuffer;
 
-    gl.shaderSource(_id, 1, sourceArray.cast(), nullptr);
-    gl.compileShader(_id);
+      gl.shaderSource(_id, 1, sourceArray.cast(), nullptr);
+      gl.compileShader(_id);
 
-    final success = malloc<Int>();
-    gl.getShaderiv(_id, glCompileStatus, success);
-    _logger?.fine('Shader "$sourceName" compile success: ${success.value}');
+      final success = arena<Int>();
+      gl.getShaderiv(_id, glCompileStatus, success);
+      _logger?.fine('Shader "$sourceName" compile success: ${success.value}');
 
-    if (success.value != glTrue) {
-      final logLength = malloc<Int>();
-      gl.getShaderiv(_id, glInfoLogLength, logLength);
+      if (success.value != glTrue) {
+        final logLength = arena<Int>();
+        gl.getShaderiv(_id, glInfoLogLength, logLength);
 
-      final log = malloc<Char>(logLength.value);
-      gl.getShaderInfoLog(_id, logLength.value, nullptr, log);
-      _logger?.severe('Failed to compile shader "$sourceName": ${log.cast<Utf8>().toDartString()}');
-
-      malloc.free(logLength);
-      malloc.free(log);
-    }
-
-    malloc.free(sourceBuffer);
-    malloc.free(sourceArray);
-    malloc.free(success);
+        final log = arena<Char>(logLength.value);
+        gl.getShaderInfoLog(_id, logLength.value, nullptr, log);
+        _logger?.severe('Failed to compile shader "$sourceName": ${log.cast<Utf8>().toDartString()}');
+      }
+    });
   }
 }
 
@@ -159,8 +154,11 @@ class GlProgram {
     gl.bindBufferBase(glShaderStorageBuffer, binding, ssboId);
   }
 
-  int _uniformLocation(String uniform) =>
-      _uniformCache.putIfAbsent(uniform, () => uniform.withAsNative((utf8) => gl.getUniformLocation(_id, utf8.cast())));
+  int _uniformLocation(String uniform) => _uniformCache.putIfAbsent(
+        uniform,
+        () => using((arena) => gl.getUniformLocation(_id, uniform.toNativeUtf8(allocator: arena).cast())),
+      );
 
-  int getAttributeLocation(String attibute) => attibute.withAsNative((utf8) => gl.getAttribLocation(_id, utf8.cast()));
+  int getAttributeLocation(String attibute) =>
+      using((arena) => gl.getAttribLocation(_id, attibute.toNativeUtf8(allocator: arena).cast()));
 }

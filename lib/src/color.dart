@@ -10,33 +10,13 @@ class Color {
   static const Color blue = Color.rgb(0x0000FF);
 
   const Color(int argb)
-      : this.values(
-          ((argb >> 16) & 0xFF) / 255,
-          ((argb >> 8) & 0xFF) / 255,
-          (argb & 0xFF) / 255,
-          (argb >>> 24) / 255,
-        );
+      : this.values(((argb >> 16) & 0xFF) / 255, ((argb >> 8) & 0xFF) / 255, (argb & 0xFF) / 255, (argb >>> 24) / 255);
 
-  const Color.rgb(int rgb)
-      : this.values(
-          ((rgb >> 16) & 0xFF) / 255,
-          ((rgb >> 8) & 0xFF) / 255,
-          (rgb & 0xFF) / 255,
-        );
+  const Color.rgb(int rgb) : this.values(((rgb >> 16) & 0xFF) / 255, ((rgb >> 8) & 0xFF) / 255, (rgb & 0xFF) / 255);
 
-  const Color.values(double red, double green, double blue, [double alpha = 1])
-      : r = red,
-        g = green,
-        b = blue,
-        a = alpha;
+  const Color.values(this.r, this.g, this.b, [this.a = 1]);
 
-  Color.ofVector(Vector4 color)
-      : this.values(
-          color.r,
-          color.g,
-          color.b,
-          color.a,
-        );
+  Color.ofVector(Vector4 color) : this.values(color.r, color.g, color.b, color.a);
 
   factory Color.ofHsv(double hue, double saturation, double value, [double alpha = 1]) {
     final rgbColor = Vector4(hue, saturation, value, alpha);
