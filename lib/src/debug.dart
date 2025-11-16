@@ -6,33 +6,33 @@ import 'package:diamond_gl/src/diamond_gl_base.dart';
 import 'package:ffi/ffi.dart';
 
 const Map<int, String> _glMessageTypes = {
-  gl_debugTypeMarker: 'MARKER',
-  gl_debugTypeDeprecatedBehavior: 'DEPRECATED_BEHAVIOR',
-  gl_debugTypeError: 'ERROR',
-  gl_debugTypeOther: 'OTHER',
-  gl_debugTypePerformance: 'PERFORMANCE',
-  gl_debugTypePortability: 'PORTABILITY',
-  gl_debugTypePushGroup: 'PUSH_GROUP',
-  gl_debugTypePopGroup: 'POP_GROUP',
+  glDebugTypeMarker: 'MARKER',
+  glDebugTypeDeprecatedBehavior: 'DEPRECATED_BEHAVIOR',
+  glDebugTypeError: 'ERROR',
+  glDebugTypeOther: 'OTHER',
+  glDebugTypePerformance: 'PERFORMANCE',
+  glDebugTypePortability: 'PORTABILITY',
+  glDebugTypePushGroup: 'PUSH_GROUP',
+  glDebugTypePopGroup: 'POP_GROUP',
 };
 
 const Map<int, String> _glSeverities = {
-  gl_debugSeverityNotification: 'NOTIFICATION',
-  gl_debugSeverityLow: 'LOW',
-  gl_debugSeverityMedium: 'MEDIUM',
-  gl_debugSeverityHigh: 'HIGH',
+  glDebugSeverityNotification: 'NOTIFICATION',
+  glDebugSeverityLow: 'LOW',
+  glDebugSeverityMedium: 'MEDIUM',
+  glDebugSeverityHigh: 'HIGH',
 };
 
 final class DiamondGLDebugSettings {
-  static var minGlDebugSeverity = gl_debugSeverityNotification;
+  static var minGlDebugSeverity = glDebugSeverityNotification;
   static var printGlDebugStacktrace = false;
   static var printGlfwDebugStacktrace = false;
 }
 
 void attachGlErrorCallback() {
-  glEnable(gl_debugOutput);
-  glEnable(gl_debugOutputSynchronous);
-  glDebugMessageCallback(Pointer.fromFunction(_onGlError), nullptr);
+  gl.enable(glDebugOutput);
+  gl.enable(glDebugOutputSynchronous);
+  gl.debugMessageCallback(Pointer.fromFunction(_onGlError), nullptr);
 }
 
 void attachGlfwErrorCallback() {
@@ -56,9 +56,9 @@ void _onGlError(
   final logMessage =
       'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}';
 
-  if (severity > gl_debugSeverityLow) {
+  if (severity > glDebugSeverityLow) {
     _glLogger!.warning(logMessage);
-  } else if (severity > gl_debugSeverityNotification) {
+  } else if (severity > glDebugSeverityNotification) {
     _glLogger!.info(logMessage);
   } else {
     _glLogger!.fine(logMessage);

@@ -5,7 +5,7 @@ import 'diamond_gl_base.dart';
 import 'shader.dart';
 
 enum VertexElement {
-  float(4, gl_float);
+  float(4, glFloat);
 
   final int size, glType;
   const VertexElement(this.size, this.glType);
@@ -36,9 +36,9 @@ class VertexDescriptor<VertexFunction extends Function> {
         continue;
       }
 
-      glEnableVertexArrayAttrib(vao, location);
-      glVertexArrayAttribBinding(vao, location, 0);
-      glVertexArrayAttribFormat(vao, location, attr.count, attr.element.glType, gl_false, attr.offset);
+      gl.enableVertexArrayAttrib(vao, location);
+      gl.vertexArrayAttribBinding(vao, location, 0);
+      gl.vertexArrayAttribFormat(vao, location, attr.count, attr.element.glType, glFalse, attr.offset);
     }
   }
 

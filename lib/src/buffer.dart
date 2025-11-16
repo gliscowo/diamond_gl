@@ -20,7 +20,7 @@ class MeshBuffer<VF extends Function> {
   MeshBuffer(VertexDescriptor<VF> descriptor, this.program, {int initialBufferSize = 1024})
     : _descriptor = descriptor,
       _buffer = BufferWriter(initialBufferSize) {
-    glVertexArrayVertexBuffer(_vao._id, 0, _vbo._id, 0, descriptor.vertexSize);
+    gl.vertexArrayVertexBuffer(_vao._id, 0, _vbo._id, 0, descriptor.vertexSize);
     descriptor.prepareAttributes(_vao._id, program);
 
     _vertex = descriptor.createBuilder(_buffer);
@@ -45,11 +45,11 @@ class MeshBuffer<VF extends Function> {
     _buffer.rewind();
   }
 
-  void draw({int mode = gl_triangles}) {
+  void draw({int mode = glTriangles}) {
     _vao.draw(vertexCount, mode: mode);
   }
 
-  void drawInstanced(int instanceCount, {int mode = gl_triangles}) {
+  void drawInstanced(int instanceCount, {int mode = glTriangles}) {
     _vao.drawInstanced(vertexCount, instanceCount, mode: mode);
   }
 
@@ -60,15 +60,15 @@ class MeshBuffer<VF extends Function> {
 }
 
 enum BufferUsage {
-  streamDraw(gl_streamDraw),
-  streamRead(gl_streamRead),
-  streamCopy(gl_streamCopy),
-  staticDraw(gl_staticDraw),
-  staticRead(gl_staticRead),
-  staticCopy(gl_staticCopy),
-  dynamicDraw(gl_dynamicDraw),
-  dynamicRead(gl_dynamicRead),
-  dynamicCopy(gl_dynamicCopy);
+  streamDraw(glStreamDraw),
+  streamRead(glStreamRead),
+  streamCopy(glStreamCopy),
+  staticDraw(glStaticDraw),
+  staticRead(glStaticRead),
+  staticCopy(glStaticCopy),
+  dynamicDraw(glDynamicDraw),
+  dynamicRead(glDynamicRead),
+  dynamicCopy(glDynamicCopy);
 
   final int glType;
   const BufferUsage(this.glType);
@@ -80,13 +80,13 @@ class GlBufferObject {
   late final int _id;
   int _glObjectSize = 0;
 
-  GlBufferObject.array() : this._(gl_arrayBufferBinding);
-  GlBufferObject.shaderStorage() : this._(gl_shaderStorageBuffer);
+  GlBufferObject.array() : this._(glArrayBufferBinding);
+  GlBufferObject.shaderStorage() : this._(glShaderStorageBuffer);
   GlBufferObject.other(int type) : this._(type);
 
   GlBufferObject._(this.type) {
     final idPointer = malloc<UnsignedInt>();
-    glCreateBuffers(1, idPointer);
+    gl.createBuffers(1, idPointer);
     _id = idPointer.value;
     malloc.free(idPointer);
   }
@@ -98,10 +98,10 @@ class GlBufferObject {
 
     if (size != 0) {
       if (size > _glObjectSize) {
-        glNamedBufferData(_id, size, buffer, usage.glType);
+        gl.namedBufferData(_id, size, buffer, usage.glType);
         _glObjectSize = size;
       } else {
-        glNamedBufferSubData(_id, 0, size, buffer);
+        gl.namedBufferSubData(_id, 0, size, buffer);
       }
     }
 
@@ -109,14 +109,14 @@ class GlBufferObject {
   }
 
   @Deprecated('Prefer DSA')
-  void bind() => glBindBuffer(type, _id);
+  void bind() => gl.bindBuffer(type, _id);
   @Deprecated('Prefer DSA')
-  void unbind() => glBindBuffer(type, 0);
+  void unbind() => gl.bindBuffer(type, 0);
 
   void delete() {
     final idPointer = malloc<UnsignedInt>();
     idPointer.value = _id;
-    glDeleteBuffers(1, idPointer);
+    gl.deleteBuffers(1, idPointer);
     malloc.free(idPointer);
   }
 }
@@ -126,34 +126,34 @@ class GlVertexArray {
 
   GlVertexArray() {
     final idPointer = calloc<UnsignedInt>();
-    glCreateVertexArrays(1, idPointer);
+    gl.createVertexArrays(1, idPointer);
     _id = idPointer.value;
   }
 
-  void draw(int count, {int mode = gl_triangles}) {
+  void draw(int count, {int mode = glTriangles}) {
     bind();
-    glDrawArrays(mode, 0, count);
+    gl.drawArrays(mode, 0, count);
     unbind();
   }
 
-  void drawInstanced(int count, int instanceCount, {int mode = gl_triangles}) {
+  void drawInstanced(int count, int instanceCount, {int mode = glTriangles}) {
     bind();
-    glDrawArraysInstanced(mode, 0, count, instanceCount);
+    gl.drawArraysInstanced(mode, 0, count, instanceCount);
     unbind();
   }
 
   void bind() {
-    glBindVertexArray(_id);
+    gl.bindVertexArray(_id);
   }
 
   void unbind() {
-    glBindVertexArray(0);
+    gl.bindVertexArray(0);
   }
 
   void delete() {
     final idPointer = malloc<UnsignedInt>();
     idPointer.value = _id;
-    glDeleteVertexArrays(1, idPointer);
+    gl.deleteVertexArrays(1, idPointer);
     malloc.free(idPointer);
   }
 }
