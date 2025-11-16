@@ -1,6 +1,6 @@
 name: diamond_gl
 description: A low-level GLFW/OpenGL abstraction for building basic rendering pipelines
-version: 2.0.0
+version: 3.0.0
 repository: https://github.com/gliscowo/diamond_gl
 
 environment:
@@ -11,10 +11,10 @@ publish_to: https://pub.wispforest.io
 dependencies:
   dart_glfw:
     hosted: https://pub.wispforest.io
-    version: ^0.2.1
+    version: ^1.0.0
   dart_opengl:
     hosted: https://pub.wispforest.io
-    version: ^0.2.1
+    version: ^1.0.0
   ffi: ^2.1.2
   image: ^4.5.2
   logging: ^1.2.0
@@ -23,5 +23,5 @@ dependencies:
   vector_math: ^2.1.4
 
 dev_dependencies:
-  lints: ^5.1.1
+  lints: ^6.0.0
   test: ^1.24.0

@@ -1,41 +1,42 @@
 import 'dart:ffi';
 
 import 'package:dart_opengl/dart_opengl.dart';
+import 'package:diamond_gl/glfw.dart';
 import 'package:diamond_gl/src/diamond_gl_base.dart';
 import 'package:ffi/ffi.dart';
 
 const Map<int, String> _glMessageTypes = {
-  glDebugTypeMarker: 'MARKER',
-  glDebugTypeDeprecatedBehavior: 'DEPRECATED_BEHAVIOR',
-  glDebugTypeError: 'ERROR',
-  glDebugTypeOther: 'OTHER',
-  glDebugTypePerformance: 'PERFORMANCE',
-  glDebugTypePortability: 'PORTABILITY',
-  glDebugTypePushGroup: 'PUSH_GROUP',
-  glDebugTypePopGroup: 'POP_GROUP',
+  gl_debugTypeMarker: 'MARKER',
+  gl_debugTypeDeprecatedBehavior: 'DEPRECATED_BEHAVIOR',
+  gl_debugTypeError: 'ERROR',
+  gl_debugTypeOther: 'OTHER',
+  gl_debugTypePerformance: 'PERFORMANCE',
+  gl_debugTypePortability: 'PORTABILITY',
+  gl_debugTypePushGroup: 'PUSH_GROUP',
+  gl_debugTypePopGroup: 'POP_GROUP',
 };
 
 const Map<int, String> _glSeverities = {
-  glDebugSeverityNotification: 'NOTIFICATION',
-  glDebugSeverityLow: 'LOW',
-  glDebugSeverityMedium: 'MEDIUM',
-  glDebugSeverityHigh: 'HIGH',
+  gl_debugSeverityNotification: 'NOTIFICATION',
+  gl_debugSeverityLow: 'LOW',
+  gl_debugSeverityMedium: 'MEDIUM',
+  gl_debugSeverityHigh: 'HIGH',
 };
 
 final class DiamondGLDebugSettings {
-  static var minGlDebugSeverity = glDebugSeverityNotification;
+  static var minGlDebugSeverity = gl_debugSeverityNotification;
   static var printGlDebugStacktrace = false;
   static var printGlfwDebugStacktrace = false;
 }
 
 void attachGlErrorCallback() {
-  gl.enable(glDebugOutput);
-  gl.enable(glDebugOutputSynchronous);
-  gl.debugMessageCallback(Pointer.fromFunction(_onGlError), nullptr);
+  glEnable(gl_debugOutput);
+  glEnable(gl_debugOutputSynchronous);
+  glDebugMessageCallback(Pointer.fromFunction(_onGlError), nullptr);
 }
 
 void attachGlfwErrorCallback() {
-  glfw.setErrorCallback(Pointer.fromFunction(_onGlfwError));
+  glfwSetErrorCallback(Pointer.fromFunction(_onGlfwError));
 }
 
 final _glLogger = getLogger('opengl');
@@ -55,9 +56,9 @@ void _onGlError(
   final logMessage =
       'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}';
 
-  if (severity > glDebugSeverityLow) {
+  if (severity > gl_debugSeverityLow) {
     _glLogger!.warning(logMessage);
-  } else if (severity > glDebugSeverityNotification) {
+  } else if (severity > gl_debugSeverityNotification) {
     _glLogger!.info(logMessage);
   } else {
     _glLogger!.fine(logMessage);

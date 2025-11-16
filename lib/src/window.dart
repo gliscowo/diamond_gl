@@ -6,8 +6,6 @@ import 'package:ffi/ffi.dart';
 import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart';
 
-import 'diamond_gl_base.dart';
-
 typedef _GLFWwindowposfun = Void Function(Pointer<GLFWwindow>, Int, Int);
 typedef _GLFWwindowsizefun = Void Function(Pointer<GLFWwindow>, Int, Int);
 typedef _GLFWwindowclosefun = Void Function(Pointer<GLFWwindow>);
@@ -34,6 +32,16 @@ class OpenGLVersion {
   final bool coreProfile;
 
   const OpenGLVersion(this.major, this.minor, {this.coreProfile = false});
+}
+
+extension type const WindowFlag._(({int hint, int value}) _value) {
+  const WindowFlag.msaaSamples(int samples) : this._((hint: glfwSamples, value: samples));
+
+  static const startInvisible = WindowFlag._((hint: glfwVisible, value: glfwFalse));
+  static const notResizable = WindowFlag._((hint: glfwResizable, value: glfwFalse));
+  static const floating = WindowFlag._((hint: glfwFloating, value: glfwTrue));
+  static const maximized = WindowFlag._((hint: glfwMaximized, value: glfwTrue));
+  static const transparentFramebuffer = WindowFlag._((hint: glfwTransparentFramebuffer, value: glfwTrue));
 }
 
 class Window {
@@ -86,66 +94,65 @@ class Window {
     int height,
     String title, {
     OpenGLVersion contextVersion = defaultContextVersion,
-    bool floating = false,
-    int msaaSamples = 0,
     bool debug = false,
-  })  : _title = title,
-        _width = width,
-        _height = height {
-    glfw.windowHint(glfwContextVersionMajor, contextVersion.major);
-    glfw.windowHint(glfwContextVersionMinor, contextVersion.minor);
-    glfw.windowHint(glfwOpenglProfile, contextVersion.coreProfile ? glfwOpenglCoreProfile : glfwOpenglCompatProfile);
+    List<WindowFlag> flags = const [],
+  }) : _title = title,
+       _width = width,
+       _height = height {
+    glfwDefaultWindowHints();
+    glfwWindowHint(glfwContextVersionMajor, contextVersion.major);
+    glfwWindowHint(glfwContextVersionMinor, contextVersion.minor);
+    glfwWindowHint(glfwOpenglProfile, contextVersion.coreProfile ? glfwOpenglCoreProfile : glfwOpenglCompatProfile);
 
-    if (floating) glfw.windowHint(glfwFloating, glfwTrue);
-    if (msaaSamples != 0) glfw.windowHint(glfwSamples, msaaSamples);
-    if (debug) glfw.windowHint(glfwOpenglDebugContext, glfwTrue);
+    if (debug) glfwWindowHint(glfwOpenglDebugContext, glfwTrue);
+    for (final flag in flags) {
+      glfwWindowHint(flag._value.hint, flag._value.value);
+    }
 
     using((arena) {
-      _handle = glfw.createWindow(width, height, title.toNativeUtf8(allocator: arena).cast(), nullptr, nullptr);
+      _handle = glfwCreateWindow(width, height, title.toNativeUtf8(allocator: arena).cast(), nullptr, nullptr);
 
       if (_handle.address == 0) {
         final stringPtr = arena<Pointer<Utf8>>();
-        final errorCode = glfw.getError(stringPtr.cast());
+        final errorCode = glfwGetError(stringPtr.cast());
 
         final errorDescription = stringPtr.value.toDartString();
-
-        glfw.terminate();
         throw WindowInitializationException(errorCode, errorDescription);
       }
 
       final x = arena<Int>();
       final y = arena<Int>();
 
-      glfw.getWindowPos(_handle, x, y);
+      glfwGetWindowPos(_handle, x, y);
       _x = x.value;
       _y = y.value;
 
-      glfw.getFramebufferSize(_handle, x, y);
+      glfwGetFramebufferSize(_handle, x, y);
       _framebufferWidth = x.value;
       _framebufferHeight = y.value;
     });
 
     _knownWindows[_handle.address] = this;
-    glfw.setWindowPosCallback(_handle, Pointer.fromFunction<_GLFWwindowposfun>(_onMove));
-    glfw.setWindowSizeCallback(_handle, Pointer.fromFunction<_GLFWwindowsizefun>(_onResize));
-    glfw.setWindowCloseCallback(_handle, Pointer.fromFunction<_GLFWwindowclosefun>(_onClose));
-    glfw.setWindowRefreshCallback(_handle, Pointer.fromFunction<_GLFWwindowrefreshfun>(_onRefresh));
-    glfw.setWindowFocusCallback(_handle, Pointer.fromFunction<_GLFWwindowfocusfun>(_onFocus));
-    glfw.setWindowIconifyCallback(_handle, Pointer.fromFunction<_GLFWwindowiconifyfun>(_onIconify));
-    glfw.setWindowMaximizeCallback(_handle, Pointer.fromFunction<_GLFWwindowmaximizefun>(_onMaximize));
-    glfw.setFramebufferSizeCallback(_handle, Pointer.fromFunction<_GLFWframebuffersizefun>(_onFramebufferResize));
-    glfw.setWindowContentScaleCallback(_handle, Pointer.fromFunction<_GLFWwindowcontentscalefun>(_onContentRescale));
+    glfwSetWindowPosCallback(_handle, Pointer.fromFunction<_GLFWwindowposfun>(_onMove));
+    glfwSetWindowSizeCallback(_handle, Pointer.fromFunction<_GLFWwindowsizefun>(_onResize));
+    glfwSetWindowCloseCallback(_handle, Pointer.fromFunction<_GLFWwindowclosefun>(_onClose));
+    glfwSetWindowRefreshCallback(_handle, Pointer.fromFunction<_GLFWwindowrefreshfun>(_onRefresh));
+    glfwSetWindowFocusCallback(_handle, Pointer.fromFunction<_GLFWwindowfocusfun>(_onFocus));
+    glfwSetWindowIconifyCallback(_handle, Pointer.fromFunction<_GLFWwindowiconifyfun>(_onIconify));
+    glfwSetWindowMaximizeCallback(_handle, Pointer.fromFunction<_GLFWwindowmaximizefun>(_onMaximize));
+    glfwSetFramebufferSizeCallback(_handle, Pointer.fromFunction<_GLFWframebuffersizefun>(_onFramebufferResize));
+    glfwSetWindowContentScaleCallback(_handle, Pointer.fromFunction<_GLFWwindowcontentscalefun>(_onContentRescale));
 
-    glfw.setMouseButtonCallback(_handle, Pointer.fromFunction<_GLFWmousebuttonfun>(_onMouseButton));
-    glfw.setCursorPosCallback(_handle, Pointer.fromFunction<_GLFWcursorposfun>(_onMousePos));
-    glfw.setCursorEnterCallback(_handle, Pointer.fromFunction<_GLFWcursorenterfun>(_onMouseEnter));
-    glfw.setScrollCallback(_handle, Pointer.fromFunction<_GLFWscrollfun>(_onScroll));
+    glfwSetMouseButtonCallback(_handle, Pointer.fromFunction<_GLFWmousebuttonfun>(_onMouseButton));
+    glfwSetCursorPosCallback(_handle, Pointer.fromFunction<_GLFWcursorposfun>(_onMousePos));
+    glfwSetCursorEnterCallback(_handle, Pointer.fromFunction<_GLFWcursorenterfun>(_onMouseEnter));
+    glfwSetScrollCallback(_handle, Pointer.fromFunction<_GLFWscrollfun>(_onScroll));
 
-    glfw.setKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
-    glfw.setCharCallback(_handle, Pointer.fromFunction<_GLFWcharfun>(_onChar));
-    glfw.setCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
+    glfwSetKeyCallback(_handle, Pointer.fromFunction<_GLFWkeyfun>(_onKey));
+    glfwSetCharCallback(_handle, Pointer.fromFunction<_GLFWcharfun>(_onChar));
+    glfwSetCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
 
-    glfw.setDropCallback(_handle, Pointer.fromFunction<_GLFWdropfun>(_onDrop));
+    glfwSetDropCallback(_handle, Pointer.fromFunction<_GLFWdropfun>(_onDrop));
   }
 
   static void _onMove(Pointer<GLFWwindow> handle, int x, int y) {
@@ -236,7 +243,7 @@ class Window {
 
     final deltaX = mouseX - window._cursorPos.x, deltaY = mouseY - window._cursorPos.y;
     if (deltaX != 0 || deltaY != 0) {
-      window._mouseMoveListeners.add((deltaX: deltaX, deltaY: deltaY));
+      window._mouseMoveListeners.add((x: mouseX, y: mouseY, dx: deltaX, dy: deltaY));
     }
 
     window._cursorPos.x = mouseX;
@@ -290,8 +297,8 @@ class Window {
     window._dropListeners.add((paths: paths));
   }
 
-  void activateContext() => glfw.makeContextCurrent(_handle);
-  static void dropContext() => glfw.makeContextCurrent(nullptr);
+  void activateContext() => glfwMakeContextCurrent(_handle);
+  static void dropContext() => glfwMakeContextCurrent(nullptr);
 
   void _enterFullscreen() {
     _restoreX = _x;
@@ -303,10 +310,10 @@ class Window {
     final height = malloc<Int>();
     final monitors = malloc<Int>();
 
-    final monitor = glfw.getMonitors(monitors)[0];
-    glfw.getMonitorWorkarea(monitor, nullptr, nullptr, width, height);
+    final monitor = glfwGetMonitors(monitors)[0];
+    glfwGetMonitorWorkarea(monitor, nullptr, nullptr, width, height);
 
-    glfw.setWindowMonitor(_handle, monitor, 0, 0, width.value, height.value, glfwDontCare);
+    glfwSetWindowMonitor(_handle, monitor, 0, 0, width.value, height.value, glfwDontCare);
 
     malloc.free(width);
     malloc.free(height);
@@ -314,7 +321,7 @@ class Window {
   }
 
   void _exitFullscreen() =>
-      glfw.setWindowMonitor(_handle, nullptr, _restoreX, _restoreY, _restoreWidth, _restoreHeight, glfwDontCare);
+      glfwSetWindowMonitor(_handle, nullptr, _restoreX, _restoreY, _restoreWidth, _restoreHeight, glfwDontCare);
 
   bool get fullscreen => _fullscreen;
   set fullscreen(bool value) {
@@ -330,7 +337,7 @@ class Window {
 
     _title = value;
     using((arena) {
-      glfw.setWindowTitle(_handle, title.toNativeUtf8(allocator: arena).cast());
+      glfwSetWindowTitle(_handle, title.toNativeUtf8(allocator: arena).cast());
     });
   }
 
@@ -347,21 +354,21 @@ class Window {
     glfwBuffer.asTypedList(bufferSize).setRange(0, bufferSize, convertedIcon.data!.buffer.asUint8List());
     image.ref.pixels = glfwBuffer.cast();
 
-    glfw.setWindowIcon(_handle, 1, image);
+    glfwSetWindowIcon(_handle, 1, image);
     malloc.free(glfwBuffer);
     malloc.free(image);
   }
 
   /// Prepare this window for the next frame and present
-  /// the current one. Equivalent to a call to [glfw.swapBuffers]
-  /// followed by [glfw.pollEvents]
+  /// the current one. Equivalent to a call to [glfwSwapBuffers]
+  /// followed by [glfwPollEvents]
   void nextFrame() {
-    glfw.swapBuffers(_handle);
-    glfw.pollEvents();
+    glfwSwapBuffers(_handle);
+    glfwPollEvents();
   }
 
   void dispose() {
-    glfw.destroyWindow(_handle);
+    glfwDestroyWindow(_handle);
     _knownWindows.remove(_handle.address);
   }
 
@@ -370,7 +377,7 @@ class Window {
     if (value == _cursorPos.x) return;
 
     _cursorPos.x = value;
-    glfw.setCursorPos(_handle, _cursorPos.x, _cursorPos.y);
+    glfwSetCursorPos(_handle, _cursorPos.x, _cursorPos.y);
   }
 
   double get cursorY => _cursorPos.y;
@@ -378,7 +385,7 @@ class Window {
     if (value == _cursorPos.y) return;
 
     _cursorPos.y = value;
-    glfw.setCursorPos(_handle, _cursorPos.x, _cursorPos.y);
+    glfwSetCursorPos(_handle, _cursorPos.x, _cursorPos.y);
   }
 
   Vector2 get cursorPos => _cursorPos.xy;
@@ -425,7 +432,7 @@ typedef FramebufferResizeEvent = ({int newWidth, int newHeight});
 typedef ContentRescaleEvent = ({double xScale, double yScale});
 
 typedef MouseInputEvent = ({int button, int action, int mods});
-typedef MouseMoveEvent = ({double deltaX, double deltaY});
+typedef MouseMoveEvent = ({double x, double y, double dx, double dy});
 typedef MouseEnterEvent = ();
 typedef MouseLeaveEvent = ();
 typedef MouseScrollEvent = ({double xOffset, double yOffset});
