@@ -2,47 +2,41 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:dart_opengl/dart_opengl.dart';
+import 'package:diamond_gl/src/byte_array.dart';
 import 'package:ffi/ffi.dart';
 
 import 'diamond_gl_base.dart';
 import 'shader.dart';
 import 'vertex_descriptor.dart';
 
-class MeshBuffer<VF extends Function> {
+class MeshBuffer<Vertex> {
   final GlBufferObject _vbo = GlBufferObject.array();
   final GlVertexArray _vao = GlVertexArray();
-  final VertexDescriptor<VF> _descriptor;
+  final VertexDescriptor<Vertex> _descriptor;
   final GlProgram program;
 
-  BufferWriter _buffer;
-  late VF _vertex;
+  BufferWriter buffer;
 
-  MeshBuffer(VertexDescriptor<VF> descriptor, this.program, {int initialBufferSize = 1024})
+  MeshBuffer(VertexDescriptor<Vertex> descriptor, this.program, {ByteArray? array})
     : _descriptor = descriptor,
-      _buffer = BufferWriter(initialBufferSize) {
+      buffer = BufferWriter(array ?? NativeByteArray(size: 1024)) {
     gl.vertexArrayVertexBuffer(_vao._id, 0, _vbo._id, 0, descriptor.vertexSize);
     descriptor.prepareAttributes(_vao._id, program);
-
-    _vertex = descriptor.createBuilder(_buffer);
   }
 
-  VF get vertex => _vertex;
+  int get vertexCount => buffer._cursor ~/ _descriptor.vertexSize;
+  bool get isEmpty => buffer._cursor == 0;
 
-  BufferWriter get buffer => _buffer;
-  set buffer(BufferWriter buffer) {
-    _buffer = buffer;
-    _vertex = _descriptor.createBuilder(_buffer);
+  void writeVertices(List<Vertex> vertices) {
+    _descriptor.serialize(buffer, vertices);
   }
 
-  int get vertexCount => _buffer._cursor ~/ _descriptor.vertexSize;
-  bool get isEmpty => _buffer._cursor == 0;
-
-  void upload({bool dynamic = false}) {
-    _vbo.upload(_buffer, dynamic ? BufferUsage.dynamicDraw : BufferUsage.staticDraw);
+  void upload({BufferUsage usage = BufferUsage.staticDraw}) {
+    _vbo.upload(buffer, usage);
   }
 
   void clear() {
-    _buffer.rewind();
+    buffer.rewind();
   }
 
   void draw({int mode = glTriangles}) {
@@ -94,18 +88,15 @@ class GlBufferObject {
   int get id => _id;
 
   void upload(BufferWriter data, BufferUsage usage) {
-    final (buffer, size, free) = data.prepareForUploading();
-
-    if (size != 0) {
+    final size = data.cursor;
+    data.array.view(size, (pointer) {
       if (size > _glObjectSize) {
-        gl.namedBufferData(_id, size, buffer, usage.glType);
+        gl.namedBufferData(_id, size, pointer.cast(), usage.glType);
         _glObjectSize = size;
       } else {
-        gl.namedBufferSubData(_id, 0, size, buffer);
+        gl.namedBufferSubData(_id, 0, size, pointer.cast());
       }
-    }
-
-    if (free) malloc.free(buffer);
+    });
   }
 
   @Deprecated('Prefer DSA')
@@ -160,26 +151,33 @@ class GlVertexArray {
 
 final class BufferWriter {
   static final _logger = getLogger('buffer_writer');
+  static const _int32Size = Int32List.bytesPerElement;
   static const _uint32Size = Uint32List.bytesPerElement;
   static const _float32Size = Float32List.bytesPerElement;
+  static const _float64Size = Float64List.bytesPerElement;
 
-  ByteData _data;
+  final ByteArray array;
   int _cursor = 0;
 
-  BufferWriter([int initialSize = 64]) : _data = ByteData(64);
-  factory BufferWriter.native([int initialSize = 64]) => NativeBufferWriter._(initialSize);
+  BufferWriter(this.array);
 
-  void u32(int f) {
+  int get cursor => _cursor;
+
+  void rewind() {
+    _cursor = 0;
+  }
+
+  void u32(int a) {
     _ensureCapacity(_uint32Size);
 
-    _data.setUint32(_cursor, f, Endian.host);
+    array.data.setUint32(_cursor, a, Endian.host);
     _cursor += _uint32Size;
   }
 
   void u32x2(int a, int b) {
     _ensureCapacity(_uint32Size * 2);
 
-    _data
+    array.data
       ..setUint32(_cursor + _uint32Size * 0, a, Endian.host)
       ..setUint32(_cursor + _uint32Size * 1, b, Endian.host);
     _cursor += _uint32Size * 2;
@@ -188,7 +186,7 @@ final class BufferWriter {
   void u32x3(int a, int b, int c) {
     _ensureCapacity(_uint32Size * 3);
 
-    _data
+    array.data
       ..setUint32(_cursor + _uint32Size * 0, a, Endian.host)
       ..setUint32(_cursor + _uint32Size * 1, b, Endian.host)
       ..setUint32(_cursor + _uint32Size * 2, c, Endian.host);
@@ -198,7 +196,7 @@ final class BufferWriter {
   void u32x4(int a, int b, int c, int d) {
     _ensureCapacity(_uint32Size * 4);
 
-    _data
+    array.data
       ..setUint32(_cursor + _uint32Size * 0, a, Endian.host)
       ..setUint32(_cursor + _uint32Size * 1, b, Endian.host)
       ..setUint32(_cursor + _uint32Size * 2, c, Endian.host)
@@ -206,17 +204,54 @@ final class BufferWriter {
     _cursor += _uint32Size * 4;
   }
 
-  void f32(double f) {
+  void i32(int a) {
+    _ensureCapacity(_int32Size);
+
+    array.data.setInt32(_cursor, a, Endian.host);
+    _cursor += _int32Size;
+  }
+
+  void i32x2(int a, int b) {
+    _ensureCapacity(_int32Size * 2);
+
+    array.data
+      ..setInt32(_cursor + _int32Size * 0, a, Endian.host)
+      ..setInt32(_cursor + _int32Size * 1, b, Endian.host);
+    _cursor += _int32Size * 2;
+  }
+
+  void i32x3(int a, int b, int c) {
+    _ensureCapacity(_int32Size * 3);
+
+    array.data
+      ..setInt32(_cursor + _int32Size * 0, a, Endian.host)
+      ..setInt32(_cursor + _int32Size * 1, b, Endian.host)
+      ..setInt32(_cursor + _int32Size * 2, c, Endian.host);
+    _cursor += _int32Size * 3;
+  }
+
+  void i32x4(int a, int b, int c, int d) {
+    _ensureCapacity(_int32Size * 4);
+
+    array.data
+      ..setInt32(_cursor + _int32Size * 0, a, Endian.host)
+      ..setInt32(_cursor + _int32Size * 1, b, Endian.host)
+      ..setInt32(_cursor + _int32Size * 2, c, Endian.host)
+      ..setInt32(_cursor + _int32Size * 3, d, Endian.host);
+    _cursor += _int32Size * 4;
+  }
+
+  void f32(double a) {
     _ensureCapacity(_float32Size);
 
-    _data.setFloat32(_cursor, f, Endian.host);
+    array.data.setFloat32(_cursor, a, Endian.host);
     _cursor += _float32Size;
   }
 
   void f32x2(double a, double b) {
     _ensureCapacity(_float32Size * 2);
 
-    _data
+    array.data
       ..setFloat32(_cursor + _float32Size * 0, a, Endian.host)
       ..setFloat32(_cursor + _float32Size * 1, b, Endian.host);
     _cursor += _float32Size * 2;
@@ -225,7 +260,7 @@ final class BufferWriter {
   void f32x3(double a, double b, double c) {
     _ensureCapacity(_float32Size * 3);
 
-    _data
+    array.data
       ..setFloat32(_cursor + _float32Size * 0, a, Endian.host)
       ..setFloat32(_cursor + _float32Size * 1, b, Endian.host)
       ..setFloat32(_cursor + _float32Size * 2, c, Endian.host);
@@ -235,7 +270,7 @@ final class BufferWriter {
   void f32x4(double a, double b, double c, double d) {
     _ensureCapacity(_float32Size * 4);
 
-    _data
+    array.data
       ..setFloat32(_cursor + _float32Size * 0, a, Endian.host)
       ..setFloat32(_cursor + _float32Size * 1, b, Endian.host)
       ..setFloat32(_cursor + _float32Size * 2, c, Endian.host)
@@ -243,64 +278,50 @@ final class BufferWriter {
     _cursor += _float32Size * 4;
   }
 
-  void rewind() {
-    _cursor = 0;
+  void f64(double f) {
+    _ensureCapacity(_float64Size);
+
+    array.data.setFloat64(_cursor, f, Endian.host);
+    _cursor += _float64Size;
   }
 
-  int elements(int vertexSizeInBytes) => _cursor ~/ vertexSizeInBytes;
+  void f64x2(double a, double b) {
+    _ensureCapacity(_float64Size * 2);
 
-  (Pointer<Void>, int, bool) prepareForUploading() {
-    final nativeBuffer = malloc<Uint8>(_cursor);
-    nativeBuffer.asTypedList(_cursor).setRange(0, _cursor, _data.buffer.asUint8List());
+    array.data
+      ..setFloat64(_cursor + _float64Size * 0, a, Endian.host)
+      ..setFloat64(_cursor + _float64Size * 1, b, Endian.host);
+    _cursor += _float64Size * 2;
+  }
 
-    return (nativeBuffer.cast(), _cursor, true);
+  void f64x3(double a, double b, double c) {
+    _ensureCapacity(_float64Size * 3);
+
+    array.data
+      ..setFloat64(_cursor + _float64Size * 0, a, Endian.host)
+      ..setFloat64(_cursor + _float64Size * 1, b, Endian.host)
+      ..setFloat64(_cursor + _float64Size * 2, c, Endian.host);
+    _cursor += _float64Size * 3;
+  }
+
+  void f64x4(double a, double b, double c, double d) {
+    _ensureCapacity(_float64Size * 4);
+
+    array.data
+      ..setFloat64(_cursor + _float64Size * 0, a, Endian.host)
+      ..setFloat64(_cursor + _float64Size * 1, b, Endian.host)
+      ..setFloat64(_cursor + _float64Size * 2, c, Endian.host)
+      ..setFloat64(_cursor + _float64Size * 3, d, Endian.host);
+    _cursor += _float64Size * 4;
   }
 
   void _ensureCapacity(int bytes) {
-    if (_cursor + bytes <= _data.lengthInBytes) return;
+    if (_cursor + bytes <= array.data.lengthInBytes) return;
 
-    BufferWriter._logger?.fine(
-      'Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}',
+    _logger?.fine(
+      'Growing BufferWriter $hashCode from ${array.data.lengthInBytes} to ${array.data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}',
     );
 
-    final newData = ByteData(_data.lengthInBytes * 2);
-    newData.buffer.asUint8List().setRange(0, _data.lengthInBytes, _data.buffer.asUint8List());
-    _data = newData;
-  }
-}
-
-final class NativeBufferWriter extends BufferWriter {
-  static final _finalizer = Finalizer<Pointer<Uint8>>(malloc.free);
-
-  late Pointer<Uint8> _pointer;
-
-  NativeBufferWriter._(int initialSize) {
-    _pointer = malloc<Uint8>(initialSize);
-    _data = _pointer.asTypedList(initialSize).buffer.asByteData();
-
-    _finalizer.attach(this, _pointer, detach: this);
-  }
-
-  @override
-  (Pointer<Void>, int, bool) prepareForUploading() => (_pointer.cast(), _cursor, false);
-
-  @override
-  void _ensureCapacity(int bytes) {
-    if (_cursor + bytes <= _data.lengthInBytes) return;
-
-    BufferWriter._logger?.fine(
-      'Growing BufferWriter $hashCode from ${_data.lengthInBytes} to ${_data.lengthInBytes * 2} bytes to fit ${_cursor + bytes}',
-    );
-
-    final newPointer = malloc<Uint8>(_data.lengthInBytes * 2);
-    newPointer.asTypedList(_data.lengthInBytes * 2).setRange(0, _data.lengthInBytes, _data.buffer.asUint8List());
-
-    _finalizer.detach(this);
-    malloc.free(_pointer);
-
-    _pointer = newPointer;
-    _finalizer.attach(this, _pointer, detach: this);
-
-    _data = _pointer.asTypedList(_data.lengthInBytes * 2).buffer.asByteData();
+    array.resize(array.data.lengthInBytes * 2);
   }
 }

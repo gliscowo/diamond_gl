@@ -42,6 +42,7 @@ extension type const WindowFlag._(({int hint, int value}) _value) {
   static const floating = WindowFlag._((hint: glfwFloating, value: glfwTrue));
   static const maximized = WindowFlag._((hint: glfwMaximized, value: glfwTrue));
   static const transparentFramebuffer = WindowFlag._((hint: glfwTransparentFramebuffer, value: glfwTrue));
+  static const undecorated = WindowFlag._((hint: glfwDecorated, value: glfwFalse));
 }
 
 class Window {
@@ -123,9 +124,11 @@ class Window {
       final x = arena<Int>();
       final y = arena<Int>();
 
-      glfwGetWindowPos(_handle, x, y);
-      _x = x.value;
-      _y = y.value;
+      if (glfwGetPlatform() != glfwPlatformWayland) {
+        glfwGetWindowPos(_handle, x, y);
+        _x = x.value;
+        _y = y.value;
+      }
 
       glfwGetFramebufferSize(_handle, x, y);
       _framebufferWidth = x.value;
@@ -342,6 +345,11 @@ class Window {
   }
 
   void setIcon(Image icon) {
+    if (glfwGetPlatform() == glfwPlatformWayland) {
+      // no better option if we want to avoid errors, for now at least
+      return;
+    }
+
     var image = malloc<GLFWimage>();
     image.ref.width = icon.width;
     image.ref.height = icon.height;

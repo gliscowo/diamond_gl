@@ -1,6 +1,6 @@
 import 'package:logging/logging.dart';
 
-late final Logger? baseLogger;
+Logger? baseLogger;
 Logger? getLogger(String system) {
   if (baseLogger == null) return null;
   return Logger('${baseLogger!.name}.$system');
