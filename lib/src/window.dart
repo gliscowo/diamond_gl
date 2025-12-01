@@ -82,8 +82,9 @@ class Window {
   late int _framebufferHeight;
   int _width;
   int _height;
-
+  bool _shouldClose = false;
   String _title;
+
   bool _fullscreen = false;
   int _restoreX = 0;
   int _restoreY = 0;
@@ -124,7 +125,7 @@ class Window {
       final x = arena<Int>();
       final y = arena<Int>();
 
-      if (glfwGetPlatform() != glfwPlatformWayland) {
+      if (!_isWayland) {
         glfwGetWindowPos(_handle, x, y);
         _x = x.value;
         _y = y.value;
@@ -164,7 +165,7 @@ class Window {
 
     final deltaX = x - window._x, deltaY = y - window._y;
     if (deltaX != 0 || deltaY != 0) {
-      window._moveListeners.add((deltaX: deltaX, deltaY: deltaY));
+      window._moveListeners.add((x: x, y: y, deltaX: deltaX, deltaY: deltaY));
     }
 
     window._x = x;
@@ -185,6 +186,7 @@ class Window {
     if (!_knownWindows.containsKey(handle.address)) return;
     final window = _knownWindows[handle.address]!;
 
+    window._shouldClose = true;
     window._closeListeners.add(const ());
   }
 
@@ -345,8 +347,9 @@ class Window {
   }
 
   void setIcon(Image icon) {
-    if (glfwGetPlatform() == glfwPlatformWayland) {
-      // no better option if we want to avoid errors, for now at least
+    // since GLFW currently does not support xdg_toplevel_icon we cannot set
+    // the icon there and check this to prevent emitting an error
+    if (_isWayland) {
       return;
     }
 
@@ -367,13 +370,8 @@ class Window {
     malloc.free(image);
   }
 
-  /// Prepare this window for the next frame and present
-  /// the current one. Equivalent to a call to [glfwSwapBuffers]
-  /// followed by [glfwPollEvents]
-  void nextFrame() {
-    glfwSwapBuffers(_handle);
-    glfwPollEvents();
-  }
+  void swapBuffers() => glfwSwapBuffers(_handle);
+  static void pollEvents() => glfwPollEvents();
 
   void dispose() {
     glfwDestroyWindow(_handle);
@@ -382,7 +380,7 @@ class Window {
 
   double get cursorX => _cursorPos.x;
   set cursorX(double value) {
-    if (value == _cursorPos.x) return;
+    if (_isWayland || value == _cursorPos.x) return;
 
     _cursorPos.x = value;
     glfwSetCursorPos(_handle, _cursorPos.x, _cursorPos.y);
@@ -390,13 +388,30 @@ class Window {
 
   double get cursorY => _cursorPos.y;
   set cursorY(double value) {
-    if (value == _cursorPos.y) return;
+    if (_isWayland || value == _cursorPos.y) return;
 
     _cursorPos.y = value;
     glfwSetCursorPos(_handle, _cursorPos.x, _cursorPos.y);
   }
 
   Vector2 get cursorPos => _cursorPos.xy;
+
+  /// In an effort to stay general-purpose, window coordinates are tracked by this class
+  /// even though Wayland does not have such a concept. Thus, use with care
+  int get x => _x;
+
+  /// In an effort to stay general-purpose, window coordinates are tracked by this class
+  /// even though Wayland does not have such a concept. Thus, use with care
+  int get y => _y;
+
+  int get width => _width;
+  int get height => _height;
+  int get framebufferWidth => _framebufferWidth;
+  int get framebufferHeight => _framebufferHeight;
+
+  bool get shouldClose => _shouldClose;
+
+  Pointer<GLFWwindow> get handle => _handle;
 
   Stream<WindowMoveEvent> get onMove => _moveListeners.stream;
   Stream<WindowResizeEvent> get onResize => _resizeListeners.stream;
@@ -420,16 +435,10 @@ class Window {
 
   Stream<FilesDroppedEvent> get onFilesDropped => _dropListeners.stream;
 
-  int get x => _x;
-  int get y => _y;
-  int get width => _width;
-  int get height => _height;
-  int get framebufferWidth => _framebufferWidth;
-  int get framebufferHeight => _framebufferHeight;
-  Pointer<GLFWwindow> get handle => _handle;
+  static final _isWayland = glfwGetPlatform() == glfwPlatformWayland;
 }
 
-typedef WindowMoveEvent = ({int deltaX, int deltaY});
+typedef WindowMoveEvent = ({int x, int y, int deltaX, int deltaY});
 typedef WindowResizeEvent = ({int newWidth, int newHeight});
 typedef WindowCloseEvent = ();
 typedef WindowRefreshEvent = ();
