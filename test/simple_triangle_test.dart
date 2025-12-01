@@ -1,8 +1,8 @@
 import 'dart:math';
 
-import 'package:diamond_gl/diamond_gl.dart';
-import 'package:diamond_gl/glfw.dart';
-import 'package:diamond_gl/opengl.dart';
+import 'package:clawclip/clawclip.dart';
+import 'package:clawclip/glfw.dart';
+import 'package:clawclip/opengl.dart';
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 import 'package:vector_math/vector_math.dart';
@@ -45,21 +45,19 @@ void main() {
     Logger.root.onRecord.listen((event) {
       print('[${event.loggerName}] (${event.level}) ${event.message}');
     });
-    initDiamondGL(logger: Logger('dgl'));
+    initClawclip(logger: Logger('dgl'));
     attachGlErrorCallback();
     attachGlfwErrorCallback();
 
     glfwInitHint(glfwWaylandLibdecor, glfwWaylandDisableLibdecor);
 
     glfwInit();
-    final window = Window(800, 600, 'diamond_gl triangle test', flags: [.transparentFramebuffer, .undecorated]);
+    final window = Window(800, 600, 'clawclip triangle test', flags: [.transparentFramebuffer, .undecorated]);
 
     window.activateContext();
     window.onFramebufferResize.listen((event) {
       gl.viewport(0, 0, event.newWidth, event.newHeight);
     });
-
-    print(glfwGetWindowAttrib(window.handle, glfwDecorated));
 
     glfwSwapInterval(0);
 
@@ -71,7 +69,7 @@ void main() {
 
     final mesh = MeshBuffer(vertexDescriptor, program);
 
-    while (glfwWindowShouldClose(window.handle) != glfwTrue) {
+    while (!window.shouldClose) {
       gl.clearColor(1, 1, 1, 0);
       gl.clear(glColorBufferBit);
 
@@ -89,8 +87,8 @@ void main() {
         ..upload(usage: .dynamicDraw)
         ..draw();
 
-      glfwPollEvents();
-      glfwSwapBuffers(window.handle);
+      window.swapBuffers();
+      Window.pollEvents();
     }
   });
 }

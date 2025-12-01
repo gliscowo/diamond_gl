@@ -1,8 +1,8 @@
 import 'package:dart_opengl/dart_opengl.dart';
-import 'package:diamond_gl/diamond_gl.dart';
+import 'package:clawclip/clawclip.dart';
 import 'package:vector_math/vector_math.dart' as v32;
 
-import 'diamond_gl_base.dart';
+import 'clawclip_base.dart';
 
 enum VertexAttributePrimitive {
   u32(4, glUnsignedInt),

@@ -1,8 +1,8 @@
 import 'dart:ffi';
 
 import 'package:dart_opengl/dart_opengl.dart';
-import 'package:diamond_gl/glfw.dart';
-import 'package:diamond_gl/src/diamond_gl_base.dart';
+import 'package:clawclip/glfw.dart';
+import 'package:clawclip/src/clawclip_base.dart';
 import 'package:ffi/ffi.dart';
 
 const Map<int, String> _glMessageTypes = {
@@ -23,7 +23,7 @@ const Map<int, String> _glSeverities = {
   glDebugSeverityHigh: 'HIGH',
 };
 
-final class DiamondGLDebugSettings {
+final class ClawclipDebugSettings {
   static var minGlDebugSeverity = glDebugSeverityNotification;
   static var printGlDebugStacktrace = false;
   static var printGlfwDebugStacktrace = false;
@@ -51,7 +51,7 @@ void _onGlError(
   Pointer<Char> message,
   Pointer<Void> userParam,
 ) {
-  if (_glLogger == null || severity < DiamondGLDebugSettings.minGlDebugSeverity) return;
+  if (_glLogger == null || severity < ClawclipDebugSettings.minGlDebugSeverity) return;
 
   final logMessage =
       'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}';
@@ -64,12 +64,12 @@ void _onGlError(
     _glLogger!.fine(logMessage);
   }
 
-  if (DiamondGLDebugSettings.printGlDebugStacktrace) _glLogger!.warning(StackTrace.current);
+  if (ClawclipDebugSettings.printGlDebugStacktrace) _glLogger!.warning(StackTrace.current);
 }
 
 void _onGlfwError(int errorCode, Pointer<Char> description) {
   if (_glfwLogger == null) return;
 
   _glfwLogger!.severe('GLFW Error: ${description.cast<Utf8>().toDartString()} ($errorCode)');
-  if (DiamondGLDebugSettings.printGlDebugStacktrace) _glfwLogger!.warning(StackTrace.current);
+  if (ClawclipDebugSettings.printGlDebugStacktrace) _glfwLogger!.warning(StackTrace.current);
 }

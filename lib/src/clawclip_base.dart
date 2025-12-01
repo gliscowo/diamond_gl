@@ -7,9 +7,9 @@ Logger? getLogger(String system) {
 }
 
 bool _initialized = false;
-bool get diamondGLInitialized => _initialized;
+bool get clawclipInitialized => _initialized;
 
-void initDiamondGL({Logger? logger}) {
+void initClawclip({Logger? logger}) {
   if (_initialized) return;
 
   baseLogger = logger;

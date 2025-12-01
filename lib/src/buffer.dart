@@ -2,10 +2,10 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:dart_opengl/dart_opengl.dart';
-import 'package:diamond_gl/src/byte_array.dart';
+import 'package:clawclip/src/byte_array.dart';
 import 'package:ffi/ffi.dart';
 
-import 'diamond_gl_base.dart';
+import 'clawclip_base.dart';
 import 'shader.dart';
 import 'vertex_descriptor.dart';
 

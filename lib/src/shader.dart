@@ -8,7 +8,7 @@ import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:vector_math/vector_math.dart';
 
-import 'diamond_gl_base.dart';
+import 'clawclip_base.dart';
 
 final _logger = getLogger('shader_compiler');
 

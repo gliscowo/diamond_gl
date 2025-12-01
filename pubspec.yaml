@@ -1,7 +1,7 @@
-name: diamond_gl
+name: clawclip
 description: A low-level GLFW/OpenGL abstraction for building basic rendering pipelines
 version: 4.0.0
-repository: https://github.com/gliscowo/diamond_gl
+repository: https://github.com/gliscowo/clawclip
 
 environment:
   sdk: ^3.10.0
