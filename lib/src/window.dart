@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ffi';
 
+import 'package:clawclip/clawclip.dart';
+import 'package:clawclip/src/debug.dart';
 import 'package:dart_glfw/dart_glfw.dart';
 import 'package:ffi/ffi.dart';
 import 'package:image/image.dart';
@@ -157,6 +159,12 @@ class Window {
     glfwSetCharModsCallback(_handle, Pointer.fromFunction<_GLFWcharmodsfun>(_onCharMods));
 
     glfwSetDropCallback(_handle, Pointer.fromFunction<_GLFWdropfun>(_onDrop));
+
+    if (clawlipLoggingConfig?.glConfig != null) {
+      activateContext();
+      attachGlErrorCallbackToContext();
+      Window.dropContext();
+    }
   }
 
   static void _onMove(Pointer<GLFWwindow> handle, int x, int y) {
@@ -372,6 +380,9 @@ class Window {
 
   void swapBuffers() => glfwSwapBuffers(_handle);
   static void pollEvents() => glfwPollEvents();
+
+  static void enableVsyncInContexct() => glfwSwapInterval(1);
+  static void disableVsyncInContext() => glfwSwapInterval(0);
 
   void dispose() {
     glfwDestroyWindow(_handle);

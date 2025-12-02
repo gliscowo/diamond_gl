@@ -1,46 +1,69 @@
 import 'dart:ffi';
 
-import 'package:dart_opengl/dart_opengl.dart';
 import 'package:clawclip/glfw.dart';
-import 'package:clawclip/src/clawclip_base.dart';
+import 'package:clawclip/src/clawclip_logging.dart';
+import 'package:dart_opengl/dart_opengl.dart';
 import 'package:ffi/ffi.dart';
 
-const Map<int, String> _glMessageTypes = {
-  glDebugTypeMarker: 'MARKER',
-  glDebugTypeDeprecatedBehavior: 'DEPRECATED_BEHAVIOR',
-  glDebugTypeError: 'ERROR',
-  glDebugTypeOther: 'OTHER',
-  glDebugTypePerformance: 'PERFORMANCE',
-  glDebugTypePortability: 'PORTABILITY',
-  glDebugTypePushGroup: 'PUSH_GROUP',
-  glDebugTypePopGroup: 'POP_GROUP',
-};
+enum GlMessageType {
+  marker(glDebugTypeMarker),
+  deprecatedBehavior(glDebugTypeDeprecatedBehavior),
+  error(glDebugTypeError),
+  other(glDebugTypeOther),
+  performance(glDebugTypePerformance),
+  portability(glDebugTypePortability),
+  pushGroup(glDebugTypePushGroup),
+  popGroup(glDebugTypePopGroup);
 
-const Map<int, String> _glSeverities = {
-  glDebugSeverityNotification: 'NOTIFICATION',
-  glDebugSeverityLow: 'LOW',
-  glDebugSeverityMedium: 'MEDIUM',
-  glDebugSeverityHigh: 'HIGH',
-};
+  final int gl;
+  const GlMessageType(this.gl);
 
-final class ClawclipDebugSettings {
-  static var minGlDebugSeverity = glDebugSeverityNotification;
-  static var printGlDebugStacktrace = false;
-  static var printGlfwDebugStacktrace = false;
+  static final _nameLookup = {for (final type in GlMessageType.values) type.gl: type.name};
 }
 
-void attachGlErrorCallback() {
+enum GlSeverity {
+  notification(glDebugSeverityNotification),
+  low(glDebugSeverityLow),
+  medium(glDebugSeverityMedium),
+  high(glDebugSeverityHigh);
+
+  final int gl;
+  const GlSeverity(this.gl);
+
+  bool operator >(GlSeverity other) => index > other.index;
+  bool operator >=(GlSeverity other) => index >= other.index;
+  bool operator <(GlSeverity other) => index < other.index;
+  bool operator <=(GlSeverity other) => index <= other.index;
+
+  static final _nameLookup = {for (final type in GlSeverity.values) type.gl: type.name};
+}
+
+void attachGlErrorCallbackToContext() {
   gl.enable(glDebugOutput);
   gl.enable(glDebugOutputSynchronous);
   gl.debugMessageCallback(Pointer.fromFunction(_onGlError), nullptr);
+
+  final config = clawlipLoggingConfig!.glConfig!;
+  for (final messageType in GlMessageType.values) {
+    for (final severity in GlSeverity.values) {
+      gl.debugMessageControl(
+        glDontCare,
+        messageType.gl,
+        severity.gl,
+        0,
+        nullptr,
+        config.messageFilter(messageType, severity) ? glTrue : glFalse,
+      );
+    }
+  }
 }
 
 void attachGlfwErrorCallback() {
   glfwSetErrorCallback(Pointer.fromFunction(_onGlfwError));
 }
 
-final _glLogger = getLogger('opengl');
-final _glfwLogger = getLogger('glfw');
+final _glLogger = createLogger('opengl');
+final _glfwLogger = createLogger('glfw');
 
 void _onGlError(
   int source,
@@ -51,10 +74,10 @@ void _onGlError(
   Pointer<Char> message,
   Pointer<Void> userParam,
 ) {
-  if (_glLogger == null || severity < ClawclipDebugSettings.minGlDebugSeverity) return;
+  if (_glLogger == null) return;
 
   final logMessage =
-      'OpenGL Debug Message, type ${_glMessageTypes[type]} severity ${_glSeverities[severity]}: ${message.cast<Utf8>().toDartString()}';
+      'OpenGL Debug Message, type ${GlMessageType._nameLookup[type]} severity ${GlSeverity._nameLookup[severity]}: ${message.cast<Utf8>().toDartString()}';
 
   if (severity > glDebugSeverityLow) {
     _glLogger!.warning(logMessage);
@@ -64,12 +87,12 @@ void _onGlError(
     _glLogger!.fine(logMessage);
   }
 
-  if (ClawclipDebugSettings.printGlDebugStacktrace) _glLogger!.warning(StackTrace.current);
+  if (clawlipLoggingConfig!.glConfig!.printStacktraces) _glLogger!.warning(StackTrace.current);
 }
 
 void _onGlfwError(int errorCode, Pointer<Char> description) {
   if (_glfwLogger == null) return;
 
   _glfwLogger!.severe('GLFW Error: ${description.cast<Utf8>().toDartString()} ($errorCode)');
-  if (ClawclipDebugSettings.printGlDebugStacktrace) _glfwLogger!.warning(StackTrace.current);
+  if (clawlipLoggingConfig!.glfwConfig!.printStacktraces) _glfwLogger!.warning(StackTrace.current);
 }

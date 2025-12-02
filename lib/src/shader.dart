@@ -2,15 +2,16 @@ import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:clawclip/src/async_gl.dart';
 import 'package:dart_opengl/dart_opengl.dart';
 import 'package:ffi/ffi.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:vector_math/vector_math.dart';
 
-import 'clawclip_base.dart';
+import 'clawclip_logging.dart';
 
-final _logger = getLogger('shader_compiler');
+final _logger = createLogger('shader_compiler');
 
 enum GlShaderType {
   vertex(glVertexShader),
@@ -28,11 +29,13 @@ class GlShader {
   final int _id;
 
   @factory
-  static Future<GlShader> fromFile(File file, GlShaderType type) async {
+  static Future<GlCall<GlShader>> fromFile(File file, GlShaderType type) async {
     final source = await file.readAsString();
-    return GlShader(basename(file.path), source, type);
+    return GlCall(() => GlShader(basename(file.path), source, type));
   }
 
+  // TODO: consider turning this into a fallible factory
+  //  function and returning null on compilation failure
   GlShader(String sourceName, String source, GlShaderType type) : _id = gl.createShader(type.glType) {
     _loadAndCompile(sourceName, source);
   }
@@ -66,7 +69,9 @@ class GlShader {
 }
 
 class GlProgram {
-  static final Pointer<Float> _floatBuffer = malloc<Float>(16);
+  static const _floatBufferLength = 16;
+  static final _floatBuffer = malloc<Float>(_floatBufferLength);
+  static final _floatBufferView = _floatBuffer.asTypedList(_floatBufferLength);
 
   final int _id;
   final String name;
@@ -106,7 +111,7 @@ class GlProgram {
   void use() => gl.useProgram(_id);
 
   void uniformMat4(String uniform, Matrix4 value) {
-    _floatBuffer.asTypedList(value.storage.length).setRange(0, value.storage.length, value.storage);
+    _floatBufferView.setRange(0, _floatBufferLength, value.storage);
     gl.programUniformMatrix4fv(_id, _uniformLocation(uniform), 1, glFalse, _floatBuffer);
   }
 

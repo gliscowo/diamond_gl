@@ -45,9 +45,12 @@ void main() {
     Logger.root.onRecord.listen((event) {
       print('[${event.loggerName}] (${event.level}) ${event.message}');
     });
-    initClawclip(logger: Logger('dgl'));
-    attachGlErrorCallback();
-    attachGlfwErrorCallback();
+
+    clawclipSetupLoggingInIsolate(
+      baseLogger: Logger('simple_triangle'),
+      glConfig: .severityLowAllTypesNoStacktraces,
+      glfwConfig: .noStacktraces,
+    );
 
     glfwInitHint(glfwWaylandLibdecor, glfwWaylandDisableLibdecor);
 

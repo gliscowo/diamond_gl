@@ -1,11 +1,11 @@
 import 'dart:ffi';
 import 'dart:typed_data';
 
-import 'package:dart_opengl/dart_opengl.dart';
 import 'package:clawclip/src/byte_array.dart';
+import 'package:dart_opengl/dart_opengl.dart';
 import 'package:ffi/ffi.dart';
 
-import 'clawclip_base.dart';
+import 'clawclip_logging.dart';
 import 'shader.dart';
 import 'vertex_descriptor.dart';
 
@@ -24,8 +24,8 @@ class MeshBuffer<Vertex> {
     descriptor.prepareAttributes(_vao._id, program);
   }
 
-  int get vertexCount => buffer._cursor ~/ _descriptor.vertexSize;
-  bool get isEmpty => buffer._cursor == 0;
+  int get vertexCount => buffer.cursor ~/ _descriptor.vertexSize;
+  bool get isEmpty => buffer.cursor == 0;
 
   void writeVertices(List<Vertex> vertices) {
     _descriptor.serialize(buffer, vertices);
@@ -99,9 +99,9 @@ class GlBufferObject {
     });
   }
 
-  @Deprecated('Prefer DSA')
+  @Deprecated('Use DSA over binding where possible')
   void bind() => gl.bindBuffer(type, _id);
-  @Deprecated('Prefer DSA')
+  @Deprecated('Use DSA over binding where possible')
   void unbind() => gl.bindBuffer(type, 0);
 
   void delete() {
@@ -150,7 +150,7 @@ class GlVertexArray {
 }
 
 final class BufferWriter {
-  static final _logger = getLogger('buffer_writer');
+  static final _logger = createLogger('buffer_writer');
   static const _int32Size = Int32List.bytesPerElement;
   static const _uint32Size = Uint32List.bytesPerElement;
   static const _float32Size = Float32List.bytesPerElement;

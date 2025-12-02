@@ -1,8 +1,8 @@
-import 'package:dart_opengl/dart_opengl.dart';
 import 'package:clawclip/clawclip.dart';
+import 'package:dart_opengl/dart_opengl.dart';
 import 'package:vector_math/vector_math.dart' as v32;
 
-import 'clawclip_base.dart';
+import 'clawclip_logging.dart';
 
 enum VertexAttributePrimitive {
   u32(4, glUnsignedInt),
@@ -116,7 +116,7 @@ class VertexAttribute<Vertex> {
 }
 
 class VertexDescriptor<Vertex> {
-  static final _logger = getLogger('vertex_descriptor');
+  static final _logger = createLogger('vertex_descriptor');
   static final _missingAttrs = Expando<Set<String>>();
 
   final List<VertexAttribute<Vertex>> _attributes;
